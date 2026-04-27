@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
 const form = document.querySelector("#settingsForm");
 const apiKeyInput = document.querySelector("#apiKey");
 const channelIdInput = document.querySelector("#channelId");
-const videoLimitInput = document.querySelector("#videoLimit");
+const videoScopeInput = document.querySelector("#videoScope");
 const statusTitle = document.querySelector("#statusTitle");
 const statusDetail = document.querySelector("#statusDetail");
 const results = document.querySelector("#results");
@@ -31,7 +31,7 @@ form.addEventListener("submit", async (event) => {
 
   const apiKey = apiKeyInput.value.trim();
   const channelId = channelIdInput.value.trim();
-  const videoLimit = Number(videoLimitInput.value);
+  const videoScope = videoScopeInput.value;
 
   if (!apiKey || !channelId) {
     setStatus("입력 필요", "API 키와 채널 ID를 모두 입력해주세요.");
@@ -43,15 +43,23 @@ form.addEventListener("submit", async (event) => {
 
   try {
     setLoading(true);
-    setStatus("가져오는 중", "최근 영상과 댓글을 YouTube Data API에서 확인하고 있습니다.");
-    const videos = await fetchRecentVideos({ apiKey, channelId, videoLimit });
+    comments = [];
+    renderEmpty("댓글을 가져오는 중입니다.");
+
+    setStatus("영상 확인 중", "채널의 업로드 영상 목록을 가져오고 있습니다.");
+    const videos = await fetchChannelVideos({ apiKey, channelId, videoScope });
+
+    setStatus(
+      "댓글 확인 중",
+      `${videos.length}개 영상에서 댓글을 끝까지 가져오고 있습니다. 영상이 많으면 시간이 걸립니다.`,
+    );
     comments = await fetchCommentsForVideos({ apiKey, videos });
     renderComments();
     setStatus("완료", `${videos.length}개 영상에서 댓글 ${comments.length}개를 불러왔습니다.`);
   } catch (error) {
     console.error(error);
     renderEmpty("댓글을 불러오지 못했습니다.");
-    setStatus("오류", error.message || "YouTube Data API 요청에 실패했습니다.");
+    setStatus("오류", explainError(error));
   } finally {
     setLoading(false);
   }
@@ -73,52 +81,109 @@ filterButtons.forEach((button) => {
   });
 });
 
-async function fetchRecentVideos({ apiKey, channelId, videoLimit }) {
-  const params = new URLSearchParams({
+async function fetchChannelVideos({ apiKey, channelId, videoScope }) {
+  const channelParams = new URLSearchParams({
     key: apiKey,
-    part: "snippet",
-    channelId,
-    maxResults: String(Math.min(Math.max(videoLimit, 1), 20)),
-    order: "date",
-    type: "video",
+    part: "contentDetails",
+    id: channelId,
   });
+  const channelData = await getJson(
+    `https://www.googleapis.com/youtube/v3/channels?${channelParams}`,
+  );
+  const uploadsPlaylistId =
+    channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
-  const data = await getJson(`https://www.googleapis.com/youtube/v3/search?${params}`);
+  if (!uploadsPlaylistId) {
+    throw new Error("채널의 업로드 재생목록을 찾지 못했습니다.");
+  }
 
-  return (data.items || []).map((item) => ({
-    id: item.id.videoId,
-    title: item.snippet.title,
-    publishedAt: item.snippet.publishedAt,
-  }));
+  const limit = videoScope === "all" ? Infinity : Number(videoScope);
+  const videos = [];
+  let pageToken = "";
+
+  while (videos.length < limit) {
+    const params = new URLSearchParams({
+      key: apiKey,
+      part: "snippet,contentDetails",
+      playlistId: uploadsPlaylistId,
+      maxResults: "50",
+    });
+
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const data = await getJson(
+      `https://www.googleapis.com/youtube/v3/playlistItems?${params}`,
+    );
+
+    for (const item of data.items || []) {
+      const videoId = item.contentDetails?.videoId;
+      if (!videoId) continue;
+      videos.push({
+        id: videoId,
+        title: item.snippet?.title || "제목 없음",
+        publishedAt: item.contentDetails?.videoPublishedAt || item.snippet?.publishedAt,
+      });
+      if (videos.length >= limit) break;
+    }
+
+    setStatus("영상 확인 중", `영상 ${videos.length}개를 찾았습니다.`);
+
+    pageToken = data.nextPageToken || "";
+    if (!pageToken) break;
+  }
+
+  return videos;
 }
 
 async function fetchCommentsForVideos({ apiKey, videos }) {
-  const batches = await Promise.all(
-    videos.map(async (video) => {
-      const params = new URLSearchParams({
-        key: apiKey,
-        part: "snippet,replies",
-        videoId: video.id,
-        maxResults: "100",
-        order: "time",
-        textFormat: "plainText",
-      });
+  const collected = [];
 
-      try {
-        const data = await getJson(
-          `https://www.googleapis.com/youtube/v3/commentThreads?${params}`,
-        );
-        return (data.items || []).map((item) => normalizeComment(item, video));
-      } catch (error) {
-        if (String(error.message).includes("commentsDisabled")) {
-          return [];
-        }
-        throw error;
+  for (const [index, video] of videos.entries()) {
+    const videoComments = await fetchAllCommentsForVideo({ apiKey, video });
+    collected.push(...videoComments);
+    setStatus(
+      "댓글 확인 중",
+      `${index + 1}/${videos.length}개 영상 처리 완료, 댓글 ${collected.length}개 수집.`,
+    );
+  }
+
+  return collected.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+}
+
+async function fetchAllCommentsForVideo({ apiKey, video }) {
+  const videoComments = [];
+  let pageToken = "";
+
+  while (true) {
+    const params = new URLSearchParams({
+      key: apiKey,
+      part: "snippet,replies",
+      videoId: video.id,
+      maxResults: "100",
+      order: "time",
+      textFormat: "plainText",
+    });
+
+    if (pageToken) params.set("pageToken", pageToken);
+
+    try {
+      const data = await getJson(
+        `https://www.googleapis.com/youtube/v3/commentThreads?${params}`,
+      );
+      videoComments.push(
+        ...(data.items || []).map((item) => normalizeComment(item, video)),
+      );
+      pageToken = data.nextPageToken || "";
+      if (!pageToken) break;
+    } catch (error) {
+      if (String(error.message).includes("commentsDisabled")) {
+        return [];
       }
-    }),
-  );
+      throw error;
+    }
+  }
 
-  return batches.flat().sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+  return videoComments;
 }
 
 function normalizeComment(item, video) {
@@ -168,13 +233,15 @@ function renderComments() {
     const card = template.content.cloneNode(true);
     card.querySelector(".avatar").src = comment.avatar;
     card.querySelector(".author").textContent = comment.author;
-    card.querySelector(".meta").textContent = `${formatDate(comment.publishedAt)} · ${comment.videoTitle}`;
+    card.querySelector(".meta").textContent =
+      `${formatDate(comment.publishedAt)} · ${comment.videoTitle}`;
     card.querySelector(".commentText").textContent = comment.text;
     card.querySelector(".likeBadge").textContent =
       comment.replyCount > 0
         ? `답글 ${comment.replyCount}개 · 좋아요 ${comment.likeCount}개`
         : `답글 없음 · 좋아요 ${comment.likeCount}개`;
-    card.querySelector(".watchLink").href = `https://www.youtube.com/watch?v=${comment.videoId}&lc=${comment.id}`;
+    card.querySelector(".watchLink").href =
+      `https://www.youtube.com/watch?v=${comment.videoId}&lc=${comment.id}`;
     card.querySelector(".studioLink").href =
       `https://studio.youtube.com/channel/${channelIdInput.value.trim()}/comments/inbox`;
     fragment.append(card);
@@ -213,4 +280,12 @@ function decodeHtml(value) {
   const textarea = document.createElement("textarea");
   textarea.innerHTML = value;
   return textarea.value;
+}
+
+function explainError(error) {
+  const message = error.message || "YouTube Data API 요청에 실패했습니다.";
+  if (message.includes("Requests from referer") || message.includes("forbidden")) {
+    return "API 키의 웹사이트 제한에 https://notoow.github.io/* 를 추가해주세요.";
+  }
+  return message;
 }

@@ -24,8 +24,12 @@
             <input id="channelId" type="text" value="UCFCMjPa9xYNKkGQLHAQRTuw" />
           </label>
           <label>
-            <span>영상 수</span>
-            <input id="videoLimit" type="number" min="1" max="20" value="8" />
+            <span>영상 범위</span>
+            <select id="videoScope">
+              <option value="all" selected>전체</option>
+              <option value="10">최근 10개</option>
+              <option value="50">최근 50개</option>
+            </select>
           </label>
           <button type="submit" id="loadButton">댓글 불러오기</button>
         </form>
@@ -34,7 +38,7 @@
       <section class="statusRow" aria-live="polite">
         <div>
           <strong id="statusTitle">준비됨</strong>
-          <span id="statusDetail">YouTube Data API 키를 넣고 최근 댓글을 가져오세요.</span>
+          <span id="statusDetail">YouTube Data API 키를 넣고 댓글을 가져오세요.</span>
         </div>
         <button id="clearButton" type="button">저장값 지우기</button>
       </section>
