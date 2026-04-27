@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YouTube Comment Heart Helper</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="toolbar" aria-label="댓글 불러오기 설정">
+        <div>
+          <p class="eyebrow">YouTube Studio Helper</p>
+          <h1>하트 누를 댓글만 빠르게 고르기</h1>
+        </div>
+
+        <form id="settingsForm" class="settings">
+          <label>
+            <span>API 키</span>
+            <input id="apiKey" type="password" autocomplete="off" placeholder="AIza..." />
+          </label>
+          <label>
+            <span>채널 ID</span>
+            <input id="channelId" type="text" value="UCFCMjPa9xYNKkGQLHAQRTuw" />
+          </label>
+          <label>
+            <span>영상 수</span>
+            <input id="videoLimit" type="number" min="1" max="20" value="8" />
+          </label>
+          <button type="submit" id="loadButton">댓글 불러오기</button>
+        </form>
+      </section>
+
+      <section class="statusRow" aria-live="polite">
+        <div>
+          <strong id="statusTitle">준비됨</strong>
+          <span id="statusDetail">YouTube Data API 키를 넣고 최근 댓글을 가져오세요.</span>
+        </div>
+        <button id="clearButton" type="button">저장값 지우기</button>
+      </section>
+
+      <section class="filters" aria-label="댓글 필터">
+        <button class="filterButton active" type="button" data-filter="all">전체</button>
+        <button class="filterButton" type="button" data-filter="unreplied">답글 없음</button>
+        <button class="filterButton" type="button" data-filter="liked">좋아요 있음</button>
+      </section>
+
+      <section id="results" class="results" aria-label="댓글 목록"></section>
+    </main>
+
+    <template id="commentTemplate">
+      <article class="commentCard">
+        <header>
+          <img class="avatar" alt="" />
+          <div>
+            <h2 class="author"></h2>
+            <p class="meta"></p>
+          </div>
+        </header>
+        <p class="commentText"></p>
+        <footer>
+          <span class="likeBadge"></span>
+          <div class="actions">
+            <a class="watchLink" target="_blank" rel="noreferrer">영상</a>
+            <a class="studioLink" target="_blank" rel="noreferrer">Studio</a>
+          </div>
+        </footer>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>

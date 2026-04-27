@@ -1,0 +1,280 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f8f4;
+  --ink: #202124;
+  --muted: #6c716f;
+  --line: #dfe3dc;
+  --panel: #ffffff;
+  --accent: #e84135;
+  --accent-dark: #b9271f;
+  --green: #176f54;
+  --gold: #9b6400;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 56px;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(320px, 1.15fr);
+  gap: 28px;
+  align-items: end;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  max-width: 620px;
+  font-size: clamp(2rem, 6vw, 4.8rem);
+  line-height: 0.96;
+  letter-spacing: 0;
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr 96px;
+  gap: 12px;
+  align-items: end;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: #fbfcfa;
+}
+
+input:focus {
+  border-color: var(--accent);
+  outline: 3px solid rgb(232 65 53 / 16%);
+}
+
+button,
+.actions a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 14px;
+  color: var(--ink);
+  background: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#loadButton {
+  grid-column: 1 / -1;
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+}
+
+button:hover,
+.actions a:hover {
+  border-color: var(--accent);
+}
+
+#loadButton:hover {
+  background: var(--accent-dark);
+}
+
+.statusRow,
+.filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.statusRow {
+  min-height: 68px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.statusRow strong,
+.statusRow span {
+  display: block;
+}
+
+.statusRow span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.filters {
+  justify-content: flex-start;
+}
+
+.filterButton.active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.results {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.commentCard {
+  display: grid;
+  gap: 16px;
+  min-height: 270px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--panel);
+}
+
+.commentCard header,
+.commentCard footer {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.commentCard footer {
+  align-self: end;
+  justify-content: space-between;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 50%;
+  background: #ecefeb;
+}
+
+.author {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.meta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.commentText {
+  display: -webkit-box;
+  min-height: 86px;
+  margin: 0;
+  overflow: hidden;
+  color: #323533;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.likeBadge {
+  color: var(--green);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  padding: 36px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 60%);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .toolbar,
+  .settings,
+  .results {
+    grid-template-columns: 1fr;
+  }
+
+  .statusRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .shell {
+    width: min(100% - 20px, 1180px);
+    padding-top: 10px;
+  }
+
+  .toolbar {
+    padding: 18px;
+  }
+
+  .filters {
+    overflow-x: auto;
+  }
+
+  .commentCard footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
