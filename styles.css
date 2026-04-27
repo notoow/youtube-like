@@ -1,14 +1,15 @@
 :root {
   color-scheme: light;
-  --bg: #f7f8f4;
-  --ink: #202124;
-  --muted: #6c716f;
-  --line: #dfe3dc;
+  --bg: #f5f6f7;
+  --ink: #1f2328;
+  --muted: #68707a;
+  --line: #d8dee4;
   --panel: #ffffff;
-  --accent: #e84135;
-  --accent-dark: #b9271f;
-  --green: #176f54;
-  --gold: #9b6400;
+  --field: #f9fafb;
+  --accent: #e53935;
+  --accent-dark: #c62828;
+  --green: #1b7f5f;
+  --focus: rgb(229 57 53 / 16%);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -32,26 +33,31 @@ select {
 }
 
 .shell {
-  width: min(1180px, calc(100% - 32px));
+  width: min(1280px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 28px 0 56px;
+  padding: 24px 0 48px;
 }
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 0.85fr) minmax(320px, 1.15fr);
+  grid-template-columns: minmax(260px, 0.8fr) minmax(520px, 1.2fr);
   gap: 28px;
   align-items: end;
-  padding: 28px;
+  padding: 24px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
+  box-shadow: 0 1px 2px rgb(31 35 40 / 4%);
+}
+
+.headingBlock {
+  min-width: 0;
 }
 
 .eyebrow {
   margin: 0 0 8px;
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -59,15 +65,22 @@ select {
 
 h1 {
   margin: 0;
-  max-width: 620px;
-  font-size: clamp(2rem, 6vw, 4.8rem);
-  line-height: 0.96;
+  font-size: clamp(2rem, 4vw, 3.15rem);
+  line-height: 1.05;
   letter-spacing: 0;
+}
+
+.summary {
+  max-width: 460px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.5;
 }
 
 .settings {
   display: grid;
-  grid-template-columns: 1fr 1fr 96px;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr) 128px;
   gap: 12px;
   align-items: end;
 }
@@ -75,7 +88,7 @@ h1 {
 label {
   display: grid;
   gap: 7px;
-  color: var(--muted);
+  color: #4d5560;
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -88,13 +101,13 @@ select {
   border-radius: 6px;
   padding: 0 12px;
   color: var(--ink);
-  background: #fbfcfa;
+  background: var(--field);
 }
 
 input:focus,
 select:focus {
   border-color: var(--accent);
-  outline: 3px solid rgb(232 65 53 / 16%);
+  outline: 3px solid var(--focus);
 }
 
 button,
@@ -113,6 +126,11 @@ button,
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
 #loadButton {
   grid-column: 1 / -1;
   border-color: var(--accent);
@@ -129,17 +147,13 @@ button:hover,
   background: var(--accent-dark);
 }
 
-.statusRow,
-.filters {
+.statusRow {
   display: flex;
-  gap: 12px;
+  min-height: 64px;
   align-items: center;
   justify-content: space-between;
-  margin-top: 16px;
-}
-
-.statusRow {
-  min-height: 68px;
+  gap: 16px;
+  margin-top: 14px;
   padding: 14px 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -158,7 +172,15 @@ button:hover,
 }
 
 .filters {
-  justify-content: flex-start;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.filterButton {
+  min-height: 38px;
+  padding: 0 16px;
 }
 
 .filterButton.active {
@@ -170,17 +192,17 @@ button:hover,
 .results {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .commentCard {
   display: grid;
-  gap: 16px;
-  min-height: 270px;
+  gap: 14px;
+  min-height: 248px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 18px;
+  padding: 16px;
   background: var(--panel);
 }
 
@@ -197,40 +219,40 @@ button:hover,
 }
 
 .avatar {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
   border-radius: 50%;
-  background: #ecefeb;
+  background: #eef1f4;
 }
 
 .author {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.2;
+  font-size: 0.98rem;
+  line-height: 1.25;
 }
 
 .meta {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.3;
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .commentText {
   display: -webkit-box;
-  min-height: 86px;
+  min-height: 80px;
   margin: 0;
   overflow: hidden;
-  color: #323533;
-  line-height: 1.55;
+  color: #343941;
+  line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
 }
 
 .likeBadge {
   color: var(--green);
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 800;
 }
 
@@ -239,17 +261,23 @@ button:hover,
   gap: 8px;
 }
 
+.actions a {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.86rem;
+}
+
 .empty {
   grid-column: 1 / -1;
-  padding: 36px;
+  padding: 34px;
   border: 1px dashed var(--line);
   border-radius: 8px;
   color: var(--muted);
-  background: rgb(255 255 255 / 60%);
+  background: rgb(255 255 255 / 64%);
   text-align: center;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .toolbar,
   .settings,
   .results {
@@ -264,7 +292,7 @@ button:hover,
 
 @media (max-width: 560px) {
   .shell {
-    width: min(100% - 20px, 1180px);
+    width: min(100% - 20px, 1280px);
     padding-top: 10px;
   }
 
@@ -272,8 +300,13 @@ button:hover,
     padding: 18px;
   }
 
+  h1 {
+    font-size: 2rem;
+  }
+
   .filters {
     overflow-x: auto;
+    padding-bottom: 2px;
   }
 
   .commentCard footer {
