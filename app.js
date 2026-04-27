@@ -1,10 +1,14 @@
 const STORAGE_KEYS = {
   apiKey: "yt-heart-helper-api-key",
   channelId: "yt-heart-helper-channel-id",
+  clientId: "yt-heart-helper-client-id",
 };
+
+const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
 
 const form = document.querySelector("#settingsForm");
 const apiKeyInput = document.querySelector("#apiKey");
+const clientIdInput = document.querySelector("#clientId");
 const channelIdInput = document.querySelector("#channelId");
 const videoScopeInput = document.querySelector("#videoScope");
 const statusTitle = document.querySelector("#statusTitle");
@@ -12,33 +16,48 @@ const statusDetail = document.querySelector("#statusDetail");
 const results = document.querySelector("#results");
 const template = document.querySelector("#commentTemplate");
 const clearButton = document.querySelector("#clearButton");
+const authButton = document.querySelector("#authButton");
 const filterButtons = [...document.querySelectorAll(".filterButton")];
 
 let comments = [];
 let activeFilter = "all";
+let accessToken = "";
 
 init();
 
 function init() {
   apiKeyInput.value = localStorage.getItem(STORAGE_KEYS.apiKey) || "";
+  clientIdInput.value =
+    localStorage.getItem(STORAGE_KEYS.clientId) || clientIdInput.value;
   channelIdInput.value =
     localStorage.getItem(STORAGE_KEYS.channelId) || channelIdInput.value;
   renderEmpty("아직 불러온 댓글이 없습니다.");
 }
 
+authButton.addEventListener("click", async () => {
+  try {
+    await ensureAccessToken();
+    setStatus("Google 연결됨", "이제 댓글 카드에서 답글을 작성할 수 있습니다.");
+  } catch (error) {
+    setStatus("연결 실패", error.message || "Google OAuth 연결에 실패했습니다.");
+  }
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const apiKey = apiKeyInput.value.trim();
+  const clientId = clientIdInput.value.trim();
   const channelId = channelIdInput.value.trim();
   const videoScope = videoScopeInput.value;
 
-  if (!apiKey || !channelId) {
-    setStatus("입력 필요", "API 키와 채널 ID를 모두 입력해주세요.");
+  if (!apiKey || !clientId || !channelId) {
+    setStatus("입력 필요", "API 키, OAuth 클라이언트 ID, 채널 ID를 모두 입력해주세요.");
     return;
   }
 
   localStorage.setItem(STORAGE_KEYS.apiKey, apiKey);
+  localStorage.setItem(STORAGE_KEYS.clientId, clientId);
   localStorage.setItem(STORAGE_KEYS.channelId, channelId);
 
   try {
@@ -68,9 +87,13 @@ form.addEventListener("submit", async (event) => {
 clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.apiKey);
   localStorage.removeItem(STORAGE_KEYS.channelId);
+  localStorage.removeItem(STORAGE_KEYS.clientId);
+  accessToken = "";
   apiKeyInput.value = "";
+  clientIdInput.value =
+    "550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com";
   channelIdInput.value = "UCFCMjPa9xYNKkGQLHAQRTuw";
-  setStatus("초기화됨", "브라우저에 저장된 API 키와 채널 ID를 지웠습니다.");
+  setStatus("초기화됨", "브라우저에 저장된 API 키, OAuth 클라이언트 ID, 채널 ID를 지웠습니다.");
 });
 
 filterButtons.forEach((button) => {
@@ -201,6 +224,75 @@ function normalizeComment(item, video) {
   };
 }
 
+async function insertReply({ parentId, text }) {
+  const token = await ensureAccessToken();
+  const params = new URLSearchParams({ part: "snippet" });
+  const response = await fetch(
+    `https://www.googleapis.com/youtube/v3/comments?${params}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        snippet: {
+          parentId,
+          textOriginal: text,
+        },
+      }),
+    },
+  );
+  const data = await response.json();
+
+  if (!response.ok) {
+    const reason = data.error?.errors?.[0]?.reason;
+    const message = data.error?.message || response.statusText;
+    throw new Error(reason ? `${message} (${reason})` : message);
+  }
+
+  return data;
+}
+
+async function ensureAccessToken() {
+  if (accessToken) return accessToken;
+
+  const clientId = clientIdInput.value.trim();
+  if (!clientId) {
+    throw new Error("OAuth 클라이언트 ID를 입력해주세요.");
+  }
+
+  localStorage.setItem(STORAGE_KEYS.clientId, clientId);
+
+  if (!window.google?.accounts?.oauth2) {
+    throw new Error("Google 로그인 스크립트를 아직 불러오지 못했습니다. 잠시 뒤 다시 눌러주세요.");
+  }
+
+  accessToken = await requestAccessToken(clientId);
+  return accessToken;
+}
+
+function requestAccessToken(clientId) {
+  return new Promise((resolve, reject) => {
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: YOUTUBE_SCOPE,
+      callback: (response) => {
+        if (response.error) {
+          reject(new Error(response.error_description || response.error));
+          return;
+        }
+        resolve(response.access_token);
+      },
+      error_callback: (error) => {
+        reject(new Error(error.message || "Google OAuth 팝업이 닫혔습니다."));
+      },
+    });
+
+    tokenClient.requestAccessToken({ prompt: "consent" });
+  });
+}
+
 async function getJson(url) {
   const response = await fetch(url);
   const data = await response.json();
@@ -244,6 +336,31 @@ function renderComments() {
       `https://www.youtube.com/watch?v=${comment.videoId}&lc=${comment.id}`;
     card.querySelector(".studioLink").href =
       `https://studio.youtube.com/channel/${channelIdInput.value.trim()}/comments/inbox`;
+
+    const replyForm = card.querySelector(".replyForm");
+    const replyText = card.querySelector(".replyText");
+    const replyButton = card.querySelector(".replyButton");
+    replyForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = replyText.value.trim();
+      if (!text) return;
+
+      replyButton.disabled = true;
+      replyButton.textContent = "전송 중";
+      try {
+        await insertReply({ parentId: comment.id, text });
+        comment.replyCount += 1;
+        replyText.value = "";
+        setStatus("답글 완료", `${comment.author}님의 댓글에 답글을 달았습니다.`);
+        renderComments();
+      } catch (error) {
+        setStatus("답글 실패", explainError(error));
+      } finally {
+        replyButton.disabled = false;
+        replyButton.textContent = "답글 달기";
+      }
+    });
+
     fragment.append(card);
   });
 
@@ -286,6 +403,9 @@ function explainError(error) {
   const message = error.message || "YouTube Data API 요청에 실패했습니다.";
   if (message.includes("Requests from referer") || message.includes("forbidden")) {
     return "API 키의 웹사이트 제한에 https://notoow.github.io/* 를 추가해주세요.";
+  }
+  if (message.includes("insufficient") || message.includes("permission")) {
+    return "Google 연결 권한이 부족합니다. OAuth 동의 화면의 테스트 사용자와 YouTube 채널 계정을 확인해주세요.";
   }
   return message;
 }
