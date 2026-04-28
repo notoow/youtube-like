@@ -2,9 +2,16 @@ const STORAGE_KEYS = {
   apiKey: "yt-heart-helper-api-key",
   channelId: "yt-heart-helper-channel-id",
   clientId: "yt-heart-helper-client-id",
+  clinicGuidelines: "yt-heart-helper-clinic-guidelines",
 };
 
 const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
+const OWNER_REPLY_HANDLE = "@논현동구원장";
+const DEFAULT_CLINIC_GUIDELINES = [
+  "1. 발기부전 치료에서 주사치료는 진행하지 않고 약물 치료 중심으로 안내한다.",
+  "2. 성기확대는 돼지 등 이종진피를 쓰지 않고, 감염 예방과 자연스러움을 위해 동종진피를 우선 상담한다.",
+  "3. 의미가 없거나 단순 반응성 댓글은 답글 대신 하트/좋아요만 권장한다.",
+].join("\n");
 
 const form = document.querySelector("#settingsForm");
 const apiKeyInput = document.querySelector("#apiKey");
@@ -17,6 +24,8 @@ const results = document.querySelector("#results");
 const template = document.querySelector("#commentTemplate");
 const clearButton = document.querySelector("#clearButton");
 const authButton = document.querySelector("#authButton");
+const clinicGuidelinesInput = document.querySelector("#clinicGuidelines");
+const copyPromptButton = document.querySelector("#copyPromptButton");
 const filterButtons = [...document.querySelectorAll(".filterButton")];
 
 let comments = [];
@@ -31,6 +40,8 @@ function init() {
     localStorage.getItem(STORAGE_KEYS.clientId) || clientIdInput.value;
   channelIdInput.value =
     localStorage.getItem(STORAGE_KEYS.channelId) || channelIdInput.value;
+  clinicGuidelinesInput.value =
+    localStorage.getItem(STORAGE_KEYS.clinicGuidelines) || DEFAULT_CLINIC_GUIDELINES;
   renderEmpty("아직 불러온 댓글이 없습니다.");
 }
 
@@ -88,12 +99,29 @@ clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.apiKey);
   localStorage.removeItem(STORAGE_KEYS.channelId);
   localStorage.removeItem(STORAGE_KEYS.clientId);
+  localStorage.removeItem(STORAGE_KEYS.clinicGuidelines);
   accessToken = "";
   apiKeyInput.value = "";
   clientIdInput.value =
     "550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com";
   channelIdInput.value = "UCFCMjPa9xYNKkGQLHAQRTuw";
+  clinicGuidelinesInput.value = DEFAULT_CLINIC_GUIDELINES;
   setStatus("초기화됨", "브라우저에 저장된 API 키, OAuth 클라이언트 ID, 채널 ID를 지웠습니다.");
+});
+
+clinicGuidelinesInput.addEventListener("input", () => {
+  localStorage.setItem(STORAGE_KEYS.clinicGuidelines, clinicGuidelinesInput.value);
+});
+
+copyPromptButton.addEventListener("click", async () => {
+  try {
+    const prompt = buildAiReplyPrompt();
+    await copyText(prompt);
+    const count = getPromptCandidateComments().length;
+    setStatus("복사 완료", `AI 답글 프롬프트에 댓글 후보 ${count}개를 담았습니다.`);
+  } catch (error) {
+    setStatus("복사 실패", error.message || "클립보드 복사에 실패했습니다.");
+  }
 });
 
 filterButtons.forEach((button) => {
@@ -354,11 +382,7 @@ async function getJson(url) {
 }
 
 function renderComments() {
-  const filtered = comments.filter((comment) => {
-    if (activeFilter === "unreplied") return comment.replyCount === 0;
-    if (activeFilter === "liked") return comment.likeCount > 0;
-    return true;
-  });
+  const filtered = getActiveFilteredComments();
 
   results.replaceChildren();
 
@@ -521,6 +545,95 @@ function renderReplies(container, replies) {
     item.append(avatar, body);
     container.append(item);
   });
+}
+
+function getActiveFilteredComments() {
+  return comments.filter((comment) => {
+    if (activeFilter === "unreplied") return comment.replyCount === 0;
+    if (activeFilter === "liked") return comment.likeCount > 0;
+    return true;
+  });
+}
+
+function getPromptCandidateComments() {
+  return getActiveFilteredComments().filter((comment) => !hasOwnerReply(comment));
+}
+
+function hasOwnerReply(comment) {
+  return (comment.replies || []).some((reply) =>
+    normalizeHandle(reply.author).includes(normalizeHandle(OWNER_REPLY_HANDLE)),
+  );
+}
+
+function normalizeHandle(value) {
+  return String(value || "").replace(/\s+/g, "").toLowerCase();
+}
+
+function buildAiReplyPrompt() {
+  const candidates = getPromptCandidateComments();
+  if (!candidates.length) {
+    throw new Error("복사할 댓글 후보가 없습니다.");
+  }
+
+  const clinicGuidelines = clinicGuidelinesInput.value.trim() || DEFAULT_CLINIC_GUIDELINES;
+  const commentBlock = candidates
+    .map((comment, index) => {
+      return [
+        `${index + 1}.`,
+        `영상 제목(참고용): ${comment.videoTitle}`,
+        `댓글: ${comment.text}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+
+  return [
+    "아래는 유튜브 댓글관리 도구에서 복사한 댓글 후보 목록이야.",
+    "",
+    "너는 이 중에서 “아직 답글이 필요한 실제 댓글”만 골라서, 비뇨기과 의사 관점의 댓글 답글을 추천해줘.",
+    "",
+    "병원 답변 원칙:",
+    clinicGuidelines,
+    "",
+    "조건:",
+    "1. 영상 제목은 답글 작성에 참고만 하고, 답글 대상 문장으로 취급하지 마.",
+    "2. 댓글 작성자 아이디와 작성 시간은 제외하고, 실제 댓글 내용만 보고 답글해.",
+    `3. 이미 ${OWNER_REPLY_HANDLE} 계정으로 답글이 달린 댓글은 제외해. 아래 목록은 1차 제외 후 복사했지만, 내용상 이미 답변된 댓글도 제외해.`,
+    "4. 의미가 없거나 단순 반응성 댓글은 답글을 쓰지 말고 “하트”라고만 코드블럭에 적어줘.",
+    "5. 광고성 댓글이나 검증 안 된 제품 홍보 댓글에는 의학적으로 주의가 필요하다는 답변을 달아.",
+    "6. 조롱성 댓글에는 싸우지 말고 짧고 차분하게 응대해.",
+    "7. 답글은 한 댓글당 1개씩만 작성해.",
+    "8. 답글은 각각 개별 코드블럭으로 줘.",
+    "9. 코드블럭 안에는 답글 텍스트만 넣어. 제목, 번호, 설명, HTML 태그는 절대 넣지 마.",
+    "10. 답글은 바로 복사해서 붙여넣을 수 있게 자연스럽고 짧게 작성해.",
+    "11. 의료 관련 답변은 반드시 사실 기반으로만 작성해.",
+    "12. 과장, 보장, 확정 표현은 피하고 “개인 상태에 따라 다릅니다”, “정확한 진단이 필요합니다” 같은 안전한 표현을 사용해.",
+    "13. 성기확대 관련 댓글에서는 안전성과 자연스러움을 우선하고, 무리한 주입식 확대보다는 동종진피를 우선적으로 상담한다는 방향을 반영해.",
+    "14. 설명은 하지 말고 답글 코드블럭만 출력해.",
+    "",
+    "댓글 후보 목록:",
+    commentBlock,
+  ].join("\n");
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.append(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+
+  if (!copied) {
+    throw new Error("브라우저가 클립보드 복사를 허용하지 않았습니다.");
+  }
 }
 
 function renderEmpty(message) {

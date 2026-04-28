@@ -204,6 +204,54 @@ button:hover,
   margin-top: 14px;
 }
 
+.aiPanel {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.78fr) minmax(320px, 1fr) 160px;
+  gap: 14px;
+  align-items: end;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.aiPanel h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.aiPanel p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.guidelineField textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: var(--field);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.guidelineField textarea:focus {
+  border-color: var(--accent);
+  outline: 3px solid var(--focus);
+}
+
+#copyPromptButton {
+  min-height: 42px;
+}
+
 .filterButton {
   min-height: 38px;
   padding: 0 16px;
@@ -458,6 +506,7 @@ button:hover,
   .settings,
   .formActions,
   .advancedGrid,
+  .aiPanel,
   .videoComments {
     grid-template-columns: 1fr;
   }

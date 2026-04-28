@@ -67,6 +67,18 @@
         <button class="filterButton" type="button" data-filter="liked">좋아요 있음</button>
       </section>
 
+      <section class="aiPanel" aria-label="AI 답글 프롬프트">
+        <div>
+          <h2>AI 답글 초안</h2>
+          <p>현재 댓글 목록에서 답글 후보만 모아 외부 AI에 붙여넣을 프롬프트를 복사합니다.</p>
+        </div>
+        <label class="guidelineField">
+          <span>병원 답변 원칙</span>
+          <textarea id="clinicGuidelines" rows="4"></textarea>
+        </label>
+        <button type="button" id="copyPromptButton">프롬프트 복사</button>
+      </section>
+
       <section id="results" class="results" aria-label="댓글 목록"></section>
     </main>
 
