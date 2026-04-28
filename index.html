@@ -18,20 +18,8 @@
 
         <form id="settingsForm" class="settings">
           <label>
-            <span>API 키</span>
+            <span>연결 키</span>
             <input id="apiKey" type="password" autocomplete="off" placeholder="AIza..." />
-          </label>
-          <label>
-            <span>OAuth 클라이언트 ID</span>
-            <input
-              id="clientId"
-              type="text"
-              value="550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com"
-            />
-          </label>
-          <label>
-            <span>채널 ID</span>
-            <input id="channelId" type="text" value="UCFCMjPa9xYNKkGQLHAQRTuw" />
           </label>
           <label>
             <span>영상 범위</span>
@@ -45,6 +33,23 @@
             <button type="button" id="authButton">Google 연결</button>
             <button type="submit" id="loadButton">댓글 불러오기</button>
           </div>
+          <details class="advancedSettings">
+            <summary>고급 설정</summary>
+            <div class="advancedGrid">
+              <label>
+                <span>OAuth 클라이언트 ID</span>
+                <input
+                  id="clientId"
+                  type="text"
+                  value="550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com"
+                />
+              </label>
+              <label>
+                <span>채널 ID</span>
+                <input id="channelId" type="text" value="UCFCMjPa9xYNKkGQLHAQRTuw" />
+              </label>
+            </div>
+          </details>
         </form>
       </section>
 
@@ -75,6 +80,7 @@
           </div>
         </header>
         <p class="commentText"></p>
+        <div class="existingReplies"></div>
         <form class="replyForm">
           <textarea class="replyText" rows="2" placeholder="답글 작성"></textarea>
           <button class="replyButton" type="submit">답글 달기</button>

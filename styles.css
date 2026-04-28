@@ -40,7 +40,7 @@ select {
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(520px, 1.2fr);
+  grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.28fr);
   gap: 28px;
   align-items: end;
   padding: 24px;
@@ -80,7 +80,7 @@ h1 {
 
 .settings {
   display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.1fr) minmax(220px, 1fr) 120px;
+  grid-template-columns: minmax(260px, 1fr) 136px;
   gap: 12px;
   align-items: end;
 }
@@ -136,6 +136,26 @@ button:disabled {
   grid-column: 1 / -1;
   grid-template-columns: 150px 1fr;
   gap: 10px;
+}
+
+.advancedSettings {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.advancedSettings summary {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.advancedGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 12px;
+  margin-top: 10px;
 }
 
 #loadButton {
@@ -216,6 +236,26 @@ button:hover,
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
   background: #fff;
+}
+
+.videoGroupMedia {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  align-items: center;
+}
+
+.videoThumb {
+  width: 104px;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #eef1f4;
+}
+
+.videoGroupTitle {
+  min-width: 0;
 }
 
 .videoGroupHeader h2 {
@@ -316,6 +356,51 @@ button:hover,
   gap: 8px;
 }
 
+.existingReplies {
+  display: grid;
+  gap: 8px;
+  border-left: 3px solid #e8edf2;
+  padding-left: 10px;
+}
+
+.replyListTitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.replyItem {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.replyAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eef1f4;
+}
+
+.replyMeta,
+.replyBody {
+  margin: 0;
+}
+
+.replyMeta {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.replyBody {
+  margin-top: 3px;
+  color: #343941;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .replyText {
   width: 100%;
   min-height: 68px;
@@ -372,6 +457,7 @@ button:hover,
   .toolbar,
   .settings,
   .formActions,
+  .advancedGrid,
   .videoComments {
     grid-template-columns: 1fr;
   }
@@ -409,5 +495,13 @@ button:hover,
   .videoGroupHeader {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .videoGroupMedia {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .videoThumb {
+    width: 88px;
   }
 }

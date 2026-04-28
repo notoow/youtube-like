@@ -144,6 +144,7 @@ async function fetchChannelVideos({ apiKey, channelId, videoScope }) {
       videos.push({
         id: videoId,
         title: item.snippet?.title || "제목 없음",
+        thumbnail: pickThumbnail(item.snippet?.thumbnails),
         publishedAt: item.contentDetails?.videoPublishedAt || item.snippet?.publishedAt,
       });
       if (videos.length >= limit) break;
@@ -193,9 +194,10 @@ async function fetchAllCommentsForVideo({ apiKey, video }) {
       const data = await getJson(
         `https://www.googleapis.com/youtube/v3/commentThreads?${params}`,
       );
-      videoComments.push(
-        ...(data.items || []).map((item) => normalizeComment(item, video)),
+      const normalized = await Promise.all(
+        (data.items || []).map((item) => normalizeComment(item, video, apiKey)),
       );
+      videoComments.push(...normalized);
       pageToken = data.nextPageToken || "";
       if (!pageToken) break;
     } catch (error) {
@@ -209,17 +211,62 @@ async function fetchAllCommentsForVideo({ apiKey, video }) {
   return videoComments;
 }
 
-function normalizeComment(item, video) {
+async function normalizeComment(item, video, apiKey) {
   const snippet = item.snippet.topLevelComment.snippet;
+  const initialReplies = (item.replies?.comments || []).map(normalizeReply);
+  const totalReplyCount = item.snippet.totalReplyCount || 0;
+  const replies =
+    totalReplyCount > initialReplies.length
+      ? await fetchAllReplies({ apiKey, parentId: item.id })
+      : initialReplies;
+
   return {
     id: item.id,
     videoId: video.id,
     videoTitle: decodeHtml(video.title),
+    videoThumbnail: video.thumbnail,
     author: snippet.authorDisplayName,
     avatar: snippet.authorProfileImageUrl,
     text: snippet.textDisplay,
     likeCount: snippet.likeCount || 0,
-    replyCount: item.snippet.totalReplyCount || 0,
+    replyCount: totalReplyCount,
+    replies,
+    publishedAt: snippet.publishedAt,
+  };
+}
+
+async function fetchAllReplies({ apiKey, parentId }) {
+  const replies = [];
+  let pageToken = "";
+
+  while (true) {
+    const params = new URLSearchParams({
+      key: apiKey,
+      part: "snippet",
+      parentId,
+      maxResults: "100",
+      textFormat: "plainText",
+    });
+
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const data = await getJson(`https://www.googleapis.com/youtube/v3/comments?${params}`);
+    replies.push(...(data.items || []).map(normalizeReply));
+    pageToken = data.nextPageToken || "";
+    if (!pageToken) break;
+  }
+
+  return replies;
+}
+
+function normalizeReply(item) {
+  const snippet = item.snippet;
+  return {
+    id: item.id,
+    author: snippet.authorDisplayName,
+    avatar: snippet.authorProfileImageUrl,
+    text: snippet.textDisplay,
+    likeCount: snippet.likeCount || 0,
     publishedAt: snippet.publishedAt,
   };
 }
@@ -329,7 +376,13 @@ function renderComments() {
     const header = document.createElement("header");
     header.className = "videoGroupHeader";
 
+    const thumbnail = document.createElement("img");
+    thumbnail.className = "videoThumb";
+    thumbnail.alt = "";
+    thumbnail.src = group.videoThumbnail || "";
+
     const titleBlock = document.createElement("div");
+    titleBlock.className = "videoGroupTitle";
     const title = document.createElement("h2");
     title.textContent = group.videoTitle;
     const count = document.createElement("p");
@@ -342,7 +395,11 @@ function renderComments() {
     watch.rel = "noreferrer";
     watch.textContent = "영상 열기";
 
-    header.append(titleBlock, watch);
+    const media = document.createElement("div");
+    media.className = "videoGroupMedia";
+    media.append(thumbnail, titleBlock);
+
+    header.append(media, watch);
 
     const grid = document.createElement("div");
     grid.className = "videoComments";
@@ -365,12 +422,16 @@ function groupCommentsByVideo(commentList) {
       byVideo.set(comment.videoId, {
         videoId: comment.videoId,
         videoTitle: comment.videoTitle,
+        videoThumbnail: comment.videoThumbnail,
         latestAt: comment.publishedAt,
         comments: [],
       });
     }
 
     const group = byVideo.get(comment.videoId);
+    if (!group.videoThumbnail && comment.videoThumbnail) {
+      group.videoThumbnail = comment.videoThumbnail;
+    }
     group.comments.push(comment);
     if (new Date(comment.publishedAt) > new Date(group.latestAt)) {
       group.latestAt = comment.publishedAt;
@@ -386,6 +447,7 @@ function renderCommentCard(comment) {
   card.querySelector(".author").textContent = comment.author;
   card.querySelector(".meta").textContent = formatDate(comment.publishedAt);
   card.querySelector(".commentText").textContent = comment.text;
+  renderReplies(card.querySelector(".existingReplies"), comment.replies || []);
   card.querySelector(".likeBadge").textContent =
     comment.replyCount > 0
       ? `답글 ${comment.replyCount}개 · 좋아요 ${comment.likeCount}개`
@@ -406,8 +468,9 @@ function renderCommentCard(comment) {
     replyButton.disabled = true;
     replyButton.textContent = "전송 중";
     try {
-      await insertReply({ parentId: comment.id, text });
-      comment.replyCount += 1;
+      const reply = await insertReply({ parentId: comment.id, text });
+      comment.replies = [...(comment.replies || []), normalizeReply(reply)];
+      comment.replyCount = Math.max(comment.replyCount + 1, comment.replies.length);
       replyText.value = "";
       setStatus("답글 완료", `${comment.author}님의 댓글에 답글을 달았습니다.`);
       renderComments();
@@ -420,6 +483,44 @@ function renderCommentCard(comment) {
   });
 
   return card;
+}
+
+function renderReplies(container, replies) {
+  container.replaceChildren();
+
+  if (!replies.length) {
+    container.hidden = true;
+    return;
+  }
+
+  container.hidden = false;
+
+  const label = document.createElement("p");
+  label.className = "replyListTitle";
+  label.textContent = `기존 답글 ${replies.length}개`;
+  container.append(label);
+
+  replies.forEach((reply) => {
+    const item = document.createElement("article");
+    item.className = "replyItem";
+
+    const avatar = document.createElement("img");
+    avatar.className = "replyAvatar";
+    avatar.alt = "";
+    avatar.src = reply.avatar;
+
+    const body = document.createElement("div");
+    const meta = document.createElement("p");
+    meta.className = "replyMeta";
+    meta.textContent = `${reply.author} · ${formatDate(reply.publishedAt)}`;
+    const text = document.createElement("p");
+    text.className = "replyBody";
+    text.textContent = reply.text;
+
+    body.append(meta, text);
+    item.append(avatar, body);
+    container.append(item);
+  });
 }
 
 function renderEmpty(message) {
@@ -452,6 +553,16 @@ function decodeHtml(value) {
   const textarea = document.createElement("textarea");
   textarea.innerHTML = value;
   return textarea.value;
+}
+
+function pickThumbnail(thumbnails) {
+  return (
+    thumbnails?.medium?.url ||
+    thumbnails?.standard?.url ||
+    thumbnails?.high?.url ||
+    thumbnails?.default?.url ||
+    ""
+  );
 }
 
 function explainError(error) {
