@@ -6,6 +6,7 @@
     <title>YouTube Comment Heart Helper</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
   </head>
   <body>
     <main class="shell">
@@ -72,14 +73,48 @@
           <h2>AI 답글 초안</h2>
           <p>현재 댓글 목록에서 답글 후보만 모아 외부 AI에 붙여넣을 프롬프트를 복사합니다.</p>
         </div>
-        <label class="guidelineField">
-          <span>병원 답변 방향</span>
-          <textarea id="clinicGuidelines" rows="4"></textarea>
-        </label>
-        <label class="guidelineField">
-          <span>직원 추가 특장점</span>
-          <textarea id="clinicStrengths" rows="4"></textarea>
-        </label>
+        <section class="listEditor" data-list="guidelines" aria-label="병원 답변 방향">
+          <header>
+            <h3>병원 답변 방향</h3>
+            <div class="iconActions">
+              <button type="button" class="iconButton" data-action="download" title="txt 내려받기">
+                <i data-lucide="download"></i>
+              </button>
+              <button type="button" class="iconButton" data-action="trigger-import" title="txt 불러오기">
+                <i data-lucide="upload"></i>
+              </button>
+              <input class="importFile" type="file" accept=".txt,text/plain" hidden />
+            </div>
+          </header>
+          <div class="ruleList"></div>
+          <div class="newRuleRow">
+            <input class="newRuleInput" type="text" placeholder="답변 방향 추가" />
+            <button type="button" class="iconButton addButton" data-action="add" title="추가">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+        </section>
+        <section class="listEditor" data-list="strengths" aria-label="직원 추가 특장점">
+          <header>
+            <h3>직원 추가 특장점</h3>
+            <div class="iconActions">
+              <button type="button" class="iconButton" data-action="download" title="txt 내려받기">
+                <i data-lucide="download"></i>
+              </button>
+              <button type="button" class="iconButton" data-action="trigger-import" title="txt 불러오기">
+                <i data-lucide="upload"></i>
+              </button>
+              <input class="importFile" type="file" accept=".txt,text/plain" hidden />
+            </div>
+          </header>
+          <div class="ruleList"></div>
+          <div class="newRuleRow">
+            <input class="newRuleInput" type="text" placeholder="특장점 추가" />
+            <button type="button" class="iconButton addButton" data-action="add" title="추가">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+        </section>
         <button type="button" id="copyPromptButton">프롬프트 복사</button>
       </section>
 

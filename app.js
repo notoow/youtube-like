@@ -9,19 +9,19 @@ const STORAGE_KEYS = {
 const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
 const OWNER_REPLY_HANDLE = "@논현동구원장";
 const DEFAULT_CLINIC_GUIDELINES = [
-  "1. 하이스트비뇨의학과는 안전성을 가장 중요하게 생각하는 병원이라는 톤을 유지한다.",
-  "2. 성기확대는 “무조건 크게”가 아니라 안전성, 자연스러움, 귀두·몸통·길이의 전체 비율, 개인 조직 상태를 함께 본다는 방향으로 답한다.",
-  "3. 성기확대 재료는 돼지진피 같은 이종진피를 사용하지 않고, 감염 예방과 자연스러운 결과를 고려해 동종진피를 사용한다는 점을 자연스럽게 반영한다.",
-  "4. 필러, 진피분말, 지방, 실리콘, 구슬, 링 관련 댓글에는 뭉침·쏠림·흡수·이물감·통증·상대방 불편감·제거 어려움 등이 생길 수 있어 신중해야 한다고 답한다.",
-  "5. 발기부전 치료에서 주사치료는 시행하지 않고, 약물치료 등 환자 상태에 맞는 치료 방향으로 상담한다.",
-  "6. 의미가 거의 없거나 단순 반응성 댓글은 답글 대신 하트만 권장한다.",
-].join("\n");
+  "하이스트비뇨의학과는 안전성을 가장 중요하게 생각하는 병원이라는 톤을 유지한다.",
+  "성기확대는 “무조건 크게”가 아니라 안전성, 자연스러움, 귀두·몸통·길이의 전체 비율, 개인 조직 상태를 함께 본다는 방향으로 답한다.",
+  "성기확대 재료는 돼지진피 같은 이종진피를 사용하지 않고, 감염 예방과 자연스러운 결과를 고려해 동종진피를 사용한다는 점을 자연스럽게 반영한다.",
+  "필러, 진피분말, 지방, 실리콘, 구슬, 링 관련 댓글에는 뭉침·쏠림·흡수·이물감·통증·상대방 불편감·제거 어려움 등이 생길 수 있어 신중해야 한다고 답한다.",
+  "발기부전 치료에서 주사치료는 시행하지 않고, 약물치료 등 환자 상태에 맞는 치료 방향으로 상담한다.",
+  "의미가 거의 없거나 단순 반응성 댓글은 답글 대신 하트만 권장한다.",
+];
 const DEFAULT_CLINIC_STRENGTHS = [
-  "1. 남성수술과 남성 비뇨기 분야를 전문적으로 다루는 병원이라는 톤을 유지한다.",
-  "2. 의사가 직접 상태를 보고 상담하며, 개인의 해부학적 구조와 목표에 맞춰 계획한다.",
-  "3. 재료 선택, 수술 범위, 귀두와 몸통의 비율, 피부 여유, 기존 수술 여부, 재수술 가능성까지 종합적으로 본다.",
-  "4. 안전성, 자연스러움, 감염 예방, 사후관리, 현실적인 기대치 설정을 중요하게 생각한다.",
-].join("\n");
+  "남성수술과 남성 비뇨기 분야를 전문적으로 다루는 병원이라는 톤을 유지한다.",
+  "의사가 직접 상태를 보고 상담하며, 개인의 해부학적 구조와 목표에 맞춰 계획한다.",
+  "재료 선택, 수술 범위, 귀두와 몸통의 비율, 피부 여유, 기존 수술 여부, 재수술 가능성까지 종합적으로 본다.",
+  "안전성, 자연스러움, 감염 예방, 사후관리, 현실적인 기대치 설정을 중요하게 생각한다.",
+];
 
 const form = document.querySelector("#settingsForm");
 const apiKeyInput = document.querySelector("#apiKey");
@@ -34,16 +34,18 @@ const results = document.querySelector("#results");
 const template = document.querySelector("#commentTemplate");
 const clearButton = document.querySelector("#clearButton");
 const authButton = document.querySelector("#authButton");
-const clinicGuidelinesInput = document.querySelector("#clinicGuidelines");
-const clinicStrengthsInput = document.querySelector("#clinicStrengths");
+const listEditors = [...document.querySelectorAll(".listEditor")];
 const copyPromptButton = document.querySelector("#copyPromptButton");
 const filterButtons = [...document.querySelectorAll(".filterButton")];
 
 let comments = [];
 let activeFilter = "all";
 let accessToken = "";
+let clinicGuidelines = [];
+let clinicStrengths = [];
 
 init();
+window.addEventListener("load", refreshIcons);
 
 function init() {
   apiKeyInput.value = localStorage.getItem(STORAGE_KEYS.apiKey) || "";
@@ -51,10 +53,9 @@ function init() {
     localStorage.getItem(STORAGE_KEYS.clientId) || clientIdInput.value;
   channelIdInput.value =
     localStorage.getItem(STORAGE_KEYS.channelId) || channelIdInput.value;
-  clinicGuidelinesInput.value =
-    localStorage.getItem(STORAGE_KEYS.clinicGuidelines) || DEFAULT_CLINIC_GUIDELINES;
-  clinicStrengthsInput.value =
-    localStorage.getItem(STORAGE_KEYS.clinicStrengths) || DEFAULT_CLINIC_STRENGTHS;
+  clinicGuidelines = readRuleList(STORAGE_KEYS.clinicGuidelines, DEFAULT_CLINIC_GUIDELINES);
+  clinicStrengths = readRuleList(STORAGE_KEYS.clinicStrengths, DEFAULT_CLINIC_STRENGTHS);
+  renderAllRuleLists();
   renderEmpty("아직 불러온 댓글이 없습니다.");
 }
 
@@ -119,17 +120,23 @@ clearButton.addEventListener("click", () => {
   clientIdInput.value =
     "550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com";
   channelIdInput.value = "UCFCMjPa9xYNKkGQLHAQRTuw";
-  clinicGuidelinesInput.value = DEFAULT_CLINIC_GUIDELINES;
-  clinicStrengthsInput.value = DEFAULT_CLINIC_STRENGTHS;
+  clinicGuidelines = [...DEFAULT_CLINIC_GUIDELINES];
+  clinicStrengths = [...DEFAULT_CLINIC_STRENGTHS];
+  renderAllRuleLists();
   setStatus("초기화됨", "브라우저에 저장된 API 키, OAuth 클라이언트 ID, 채널 ID를 지웠습니다.");
 });
 
-clinicGuidelinesInput.addEventListener("input", () => {
-  localStorage.setItem(STORAGE_KEYS.clinicGuidelines, clinicGuidelinesInput.value);
-});
-
-clinicStrengthsInput.addEventListener("input", () => {
-  localStorage.setItem(STORAGE_KEYS.clinicStrengths, clinicStrengthsInput.value);
+listEditors.forEach((editor) => {
+  editor.addEventListener("click", (event) => handleListEditorClick(event, editor));
+  editor.querySelector(".newRuleInput").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addRule(editor);
+    }
+  });
+  editor.querySelector(".importFile").addEventListener("change", (event) =>
+    importRules(event, editor),
+  );
 });
 
 copyPromptButton.addEventListener("click", async () => {
@@ -150,6 +157,212 @@ filterButtons.forEach((button) => {
     renderComments();
   });
 });
+
+function readRuleList(storageKey, defaults) {
+  const stored = localStorage.getItem(storageKey);
+  if (!stored) return [...defaults];
+
+  try {
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(parsed)) {
+      return sanitizeRules(parsed);
+    }
+  } catch {
+    return sanitizeRules(stored.split(/\r?\n/).map(stripNumbering));
+  }
+
+  return [...defaults];
+}
+
+function sanitizeRules(items) {
+  return items
+    .map((item) => stripNumbering(String(item || "").trim()))
+    .filter(Boolean);
+}
+
+function stripNumbering(value) {
+  return value.replace(/^\s*\d+[\.)]\s*/, "").trim();
+}
+
+function renderAllRuleLists() {
+  listEditors.forEach(renderRuleList);
+  refreshIcons();
+}
+
+function renderRuleList(editor) {
+  const list = getRuleList(editor);
+  const container = editor.querySelector(".ruleList");
+  container.replaceChildren();
+
+  list.forEach((rule, index) => {
+    const row = document.createElement("article");
+    row.className = "ruleItem";
+    row.dataset.index = String(index);
+
+    const text = document.createElement("p");
+    text.textContent = rule;
+
+    const actions = document.createElement("div");
+    actions.className = "iconActions";
+    actions.append(
+      createIconButton("edit", "pencil", "수정"),
+      createIconButton("delete", "x", "삭제"),
+    );
+
+    row.append(text, actions);
+    container.append(row);
+  });
+}
+
+function createIconButton(action, icon, title) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "iconButton";
+  button.dataset.action = action;
+  button.title = title;
+  button.innerHTML = `<i data-lucide="${icon}"></i>`;
+  return button;
+}
+
+function handleListEditorClick(event, editor) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+
+  const action = button.dataset.action;
+  if (action === "add") addRule(editor);
+  if (action === "edit") startEditRule(editor, button);
+  if (action === "delete") deleteRule(editor, button);
+  if (action === "save") saveEditedRule(editor, button);
+  if (action === "cancel") renderRuleList(editor);
+  if (action === "download") downloadRules(editor);
+  if (action === "trigger-import") editor.querySelector(".importFile").click();
+
+  refreshIcons();
+}
+
+function addRule(editor) {
+  const input = editor.querySelector(".newRuleInput");
+  const value = stripNumbering(input.value);
+  if (!value) return;
+
+  const list = getRuleList(editor);
+  list.push(value);
+  input.value = "";
+  persistRuleList(editor, list);
+  renderRuleList(editor);
+  refreshIcons();
+}
+
+function startEditRule(editor, button) {
+  const row = button.closest(".ruleItem");
+  const index = Number(row.dataset.index);
+  const list = getRuleList(editor);
+  const value = list[index] || "";
+
+  row.replaceChildren();
+  row.classList.add("editing");
+
+  const input = document.createElement("input");
+  input.className = "editRuleInput";
+  input.type = "text";
+  input.value = value;
+
+  const actions = document.createElement("div");
+  actions.className = "iconActions";
+  actions.append(
+    createIconButton("save", "check", "저장"),
+    createIconButton("cancel", "x", "취소"),
+  );
+
+  row.append(input, actions);
+  input.focus();
+  input.select();
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") saveEditedRule(editor, actions.querySelector("[data-action='save']"));
+    if (event.key === "Escape") renderRuleList(editor);
+  });
+}
+
+function saveEditedRule(editor, button) {
+  const row = button.closest(".ruleItem");
+  const index = Number(row.dataset.index);
+  const input = row.querySelector(".editRuleInput");
+  const value = stripNumbering(input.value);
+  const list = getRuleList(editor);
+
+  if (value) {
+    list[index] = value;
+  } else {
+    list.splice(index, 1);
+  }
+
+  persistRuleList(editor, list);
+  renderRuleList(editor);
+}
+
+function deleteRule(editor, button) {
+  const row = button.closest(".ruleItem");
+  const index = Number(row.dataset.index);
+  const list = getRuleList(editor);
+  list.splice(index, 1);
+  persistRuleList(editor, list);
+  renderRuleList(editor);
+}
+
+function downloadRules(editor) {
+  const list = getRuleList(editor);
+  const name = getListType(editor) === "guidelines" ? "hospital-reply-guidelines" : "hospital-strengths";
+  const blob = new Blob([list.join("\r\n")], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${name}.txt`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function importRules(event, editor) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+
+  const text = await file.text();
+  const list = sanitizeRules(text.split(/\r?\n/));
+  if (!list.length) {
+    setStatus("불러오기 실패", "txt 파일에서 불러올 항목을 찾지 못했습니다.");
+    return;
+  }
+
+  persistRuleList(editor, list);
+  renderRuleList(editor);
+  refreshIcons();
+  setStatus("불러오기 완료", `${list.length}개 항목을 불러왔습니다.`);
+}
+
+function getListType(editor) {
+  return editor.dataset.list;
+}
+
+function getRuleList(editor) {
+  return getListType(editor) === "guidelines" ? clinicGuidelines : clinicStrengths;
+}
+
+function persistRuleList(editor, list) {
+  const cleaned = sanitizeRules(list);
+  if (getListType(editor) === "guidelines") {
+    clinicGuidelines = cleaned;
+    localStorage.setItem(STORAGE_KEYS.clinicGuidelines, JSON.stringify(cleaned));
+  } else {
+    clinicStrengths = cleaned;
+    localStorage.setItem(STORAGE_KEYS.clinicStrengths, JSON.stringify(cleaned));
+  }
+}
+
+function refreshIcons() {
+  window.lucide?.createIcons();
+}
 
 async function fetchChannelVideos({ apiKey, channelId, videoScope }) {
   const channelParams = new URLSearchParams({
@@ -594,8 +807,15 @@ function buildAiReplyPrompt() {
     throw new Error("복사할 댓글 후보가 없습니다.");
   }
 
-  const clinicGuidelines = clinicGuidelinesInput.value.trim() || DEFAULT_CLINIC_GUIDELINES;
-  const clinicStrengths = clinicStrengthsInput.value.trim() || DEFAULT_CLINIC_STRENGTHS;
+  const clinicGuidelineText = formatNumberedRules(
+    clinicGuidelines.length ? clinicGuidelines : DEFAULT_CLINIC_GUIDELINES,
+  );
+  const clinicStrengthText = formatNumberedRules([
+    "필요할 때만 자연스럽게 반영하고, 모든 답글에 억지로 넣지 마.",
+    ...(clinicStrengths.length ? clinicStrengths : DEFAULT_CLINIC_STRENGTHS),
+    "해외 의료진 연수나 수술 노하우 관련 댓글이 나오면, 하이스트 구진모 원장은 동종진피 확대수술 노하우를 국내외 의료진에게 교육해온 경험이 있다는 점을 과장 없이 자연스럽게 언급해.",
+    "병원을 홍보하는 느낌이 너무 강하지 않게, 댓글 질문에 답하는 선에서만 특장점을 넣어.",
+  ]);
   const commentBlock = candidates
     .map((comment, index) => {
       return [
@@ -635,7 +855,7 @@ function buildAiReplyPrompt() {
     "6. 의미가 거의 없거나 단순 반응성 댓글은 답글을 쓰지 말고 코드블럭 안에 “하트”라고만 써줘.",
     "",
     "하이스트비뇨의학과 답변 방향:",
-    clinicGuidelines,
+    clinicGuidelineText,
     "",
     "발기부전 답변 방향:",
     "1. 발기부전 댓글에는 혈관, 신경, 호르몬, 당뇨, 고혈압, 복용 약물, 심리적 요인 등 원인이 다양하므로 정확한 진단이 중요하다고 답해.",
@@ -646,10 +866,7 @@ function buildAiReplyPrompt() {
     "6. 성기 운동, 세수공, 기역도 같은 댓글에는 혈류 개선 운동은 도움이 될 수 있지만 성기 길이·굵기를 확실히 늘린다고 보기 어렵고, 무리한 압박이나 견인은 손상 위험이 있어 주의해야 한다고 답해.",
     "",
     "하이스트 병원 특장점 반영:",
-    "1. 필요할 때만 자연스럽게 반영하고, 모든 답글에 억지로 넣지 마.",
-    clinicStrengths,
-    "5. 해외 의료진 연수나 수술 노하우 관련 댓글이 나오면, 하이스트 구진모 원장은 동종진피 확대수술 노하우를 국내외 의료진에게 교육해온 경험이 있다는 점을 과장 없이 자연스럽게 언급해.",
-    "6. 병원을 홍보하는 느낌이 너무 강하지 않게, 댓글 질문에 답하는 선에서만 특장점을 넣어.",
+    clinicStrengthText,
     "",
     "출력 형식:",
     "원댓글 내용",
@@ -661,6 +878,10 @@ function buildAiReplyPrompt() {
     "댓글 후보 목록:",
     commentBlock,
   ].join("\n");
+}
+
+function formatNumberedRules(items) {
+  return items.map((item, index) => `${index + 1}. ${item}`).join("\n");
 }
 
 async function copyText(text) {
