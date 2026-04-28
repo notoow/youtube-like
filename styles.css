@@ -206,7 +206,7 @@ button:hover,
 
 .aiPanel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.78fr) minmax(320px, 1fr) 160px;
+  grid-template-columns: minmax(220px, 0.62fr) repeat(2, minmax(260px, 1fr)) 160px;
   gap: 14px;
   align-items: end;
   margin-top: 14px;

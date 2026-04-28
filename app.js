@@ -3,14 +3,24 @@ const STORAGE_KEYS = {
   channelId: "yt-heart-helper-channel-id",
   clientId: "yt-heart-helper-client-id",
   clinicGuidelines: "yt-heart-helper-clinic-guidelines",
+  clinicStrengths: "yt-heart-helper-clinic-strengths",
 };
 
 const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
 const OWNER_REPLY_HANDLE = "@논현동구원장";
 const DEFAULT_CLINIC_GUIDELINES = [
-  "1. 발기부전 치료에서 주사치료는 진행하지 않고 약물 치료 중심으로 안내한다.",
-  "2. 성기확대는 돼지 등 이종진피를 쓰지 않고, 감염 예방과 자연스러움을 위해 동종진피를 우선 상담한다.",
-  "3. 의미가 없거나 단순 반응성 댓글은 답글 대신 하트/좋아요만 권장한다.",
+  "1. 하이스트비뇨의학과는 안전성을 가장 중요하게 생각하는 병원이라는 톤을 유지한다.",
+  "2. 성기확대는 “무조건 크게”가 아니라 안전성, 자연스러움, 귀두·몸통·길이의 전체 비율, 개인 조직 상태를 함께 본다는 방향으로 답한다.",
+  "3. 성기확대 재료는 돼지진피 같은 이종진피를 사용하지 않고, 감염 예방과 자연스러운 결과를 고려해 동종진피를 사용한다는 점을 자연스럽게 반영한다.",
+  "4. 필러, 진피분말, 지방, 실리콘, 구슬, 링 관련 댓글에는 뭉침·쏠림·흡수·이물감·통증·상대방 불편감·제거 어려움 등이 생길 수 있어 신중해야 한다고 답한다.",
+  "5. 발기부전 치료에서 주사치료는 시행하지 않고, 약물치료 등 환자 상태에 맞는 치료 방향으로 상담한다.",
+  "6. 의미가 거의 없거나 단순 반응성 댓글은 답글 대신 하트만 권장한다.",
+].join("\n");
+const DEFAULT_CLINIC_STRENGTHS = [
+  "1. 남성수술과 남성 비뇨기 분야를 전문적으로 다루는 병원이라는 톤을 유지한다.",
+  "2. 의사가 직접 상태를 보고 상담하며, 개인의 해부학적 구조와 목표에 맞춰 계획한다.",
+  "3. 재료 선택, 수술 범위, 귀두와 몸통의 비율, 피부 여유, 기존 수술 여부, 재수술 가능성까지 종합적으로 본다.",
+  "4. 안전성, 자연스러움, 감염 예방, 사후관리, 현실적인 기대치 설정을 중요하게 생각한다.",
 ].join("\n");
 
 const form = document.querySelector("#settingsForm");
@@ -25,6 +35,7 @@ const template = document.querySelector("#commentTemplate");
 const clearButton = document.querySelector("#clearButton");
 const authButton = document.querySelector("#authButton");
 const clinicGuidelinesInput = document.querySelector("#clinicGuidelines");
+const clinicStrengthsInput = document.querySelector("#clinicStrengths");
 const copyPromptButton = document.querySelector("#copyPromptButton");
 const filterButtons = [...document.querySelectorAll(".filterButton")];
 
@@ -42,6 +53,8 @@ function init() {
     localStorage.getItem(STORAGE_KEYS.channelId) || channelIdInput.value;
   clinicGuidelinesInput.value =
     localStorage.getItem(STORAGE_KEYS.clinicGuidelines) || DEFAULT_CLINIC_GUIDELINES;
+  clinicStrengthsInput.value =
+    localStorage.getItem(STORAGE_KEYS.clinicStrengths) || DEFAULT_CLINIC_STRENGTHS;
   renderEmpty("아직 불러온 댓글이 없습니다.");
 }
 
@@ -100,17 +113,23 @@ clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.channelId);
   localStorage.removeItem(STORAGE_KEYS.clientId);
   localStorage.removeItem(STORAGE_KEYS.clinicGuidelines);
+  localStorage.removeItem(STORAGE_KEYS.clinicStrengths);
   accessToken = "";
   apiKeyInput.value = "";
   clientIdInput.value =
     "550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com";
   channelIdInput.value = "UCFCMjPa9xYNKkGQLHAQRTuw";
   clinicGuidelinesInput.value = DEFAULT_CLINIC_GUIDELINES;
+  clinicStrengthsInput.value = DEFAULT_CLINIC_STRENGTHS;
   setStatus("초기화됨", "브라우저에 저장된 API 키, OAuth 클라이언트 ID, 채널 ID를 지웠습니다.");
 });
 
 clinicGuidelinesInput.addEventListener("input", () => {
   localStorage.setItem(STORAGE_KEYS.clinicGuidelines, clinicGuidelinesInput.value);
+});
+
+clinicStrengthsInput.addEventListener("input", () => {
+  localStorage.setItem(STORAGE_KEYS.clinicStrengths, clinicStrengthsInput.value);
 });
 
 copyPromptButton.addEventListener("click", async () => {
@@ -576,39 +595,68 @@ function buildAiReplyPrompt() {
   }
 
   const clinicGuidelines = clinicGuidelinesInput.value.trim() || DEFAULT_CLINIC_GUIDELINES;
+  const clinicStrengths = clinicStrengthsInput.value.trim() || DEFAULT_CLINIC_STRENGTHS;
   const commentBlock = candidates
     .map((comment, index) => {
       return [
         `${index + 1}.`,
         `영상 제목(참고용): ${comment.videoTitle}`,
-        `댓글: ${comment.text}`,
+        `원댓글: ${comment.text}`,
       ].join("\n");
     })
     .join("\n\n");
 
   return [
-    "아래는 유튜브 댓글관리 도구에서 복사한 댓글 후보 목록이야.",
+    "아래는 유튜브 댓글관리 도구에서 정리한 댓글 후보 목록이야.",
+    "",
+    "영상 제목은 참고용이고, 답글 대상은 “원댓글” 내용이야.",
     "",
     "너는 이 중에서 “아직 답글이 필요한 실제 댓글”만 골라서, 비뇨기과 의사 관점의 댓글 답글을 추천해줘.",
     "",
-    "병원 답변 원칙:",
-    clinicGuidelines,
-    "",
-    "조건:",
-    "1. 영상 제목은 답글 작성에 참고만 하고, 답글 대상 문장으로 취급하지 마.",
-    "2. 댓글 작성자 아이디와 작성 시간은 제외하고, 실제 댓글 내용만 보고 답글해.",
+    "기본 원칙:",
+    "1. 영상 제목은 답글 대상에서 제외해.",
+    "2. “답글”, “답글 0개”, “답글 1개”, “자세히 알아보기” 같은 UI 문구는 제외해.",
     `3. 이미 ${OWNER_REPLY_HANDLE} 계정으로 답글이 달린 댓글은 제외해. 아래 목록은 1차 제외 후 복사했지만, 내용상 이미 답변된 댓글도 제외해.`,
-    "4. 의미가 없거나 단순 반응성 댓글은 답글을 쓰지 말고 “하트”라고만 코드블럭에 적어줘.",
-    "5. 광고성 댓글이나 검증 안 된 제품 홍보 댓글에는 의학적으로 주의가 필요하다는 답변을 달아.",
-    "6. 조롱성 댓글에는 싸우지 말고 짧고 차분하게 응대해.",
-    "7. 답글은 한 댓글당 1개씩만 작성해.",
+    "4. 댓글 작성자 아이디와 작성 시간은 제외하고, 실제 댓글 내용만 보고 답글해.",
+    "5. 답글은 한 댓글당 1개씩만 작성해.",
+    "6. 각 답변 위에는 어떤 댓글에 대한 답변인지 알 수 있게, 원댓글 내용을 일반 텍스트로 먼저 표시해.",
+    "7. 원댓글 표시는 코드블럭 밖에 작성해.",
     "8. 답글은 각각 개별 코드블럭으로 줘.",
     "9. 코드블럭 안에는 답글 텍스트만 넣어. 제목, 번호, 설명, HTML 태그는 절대 넣지 마.",
     "10. 답글은 바로 복사해서 붙여넣을 수 있게 자연스럽고 짧게 작성해.",
-    "11. 의료 관련 답변은 반드시 사실 기반으로만 작성해.",
-    "12. 과장, 보장, 확정 표현은 피하고 “개인 상태에 따라 다릅니다”, “정확한 진단이 필요합니다” 같은 안전한 표현을 사용해.",
-    "13. 성기확대 관련 댓글에서는 안전성과 자연스러움을 우선하고, 무리한 주입식 확대보다는 동종진피를 우선적으로 상담한다는 방향을 반영해.",
-    "14. 설명은 하지 말고 답글 코드블럭만 출력해.",
+    "11. 설명은 하지 말고, 원댓글 일반 텍스트 + 답글 코드블럭만 순서대로 출력해.",
+    "",
+    "의료 답변 원칙:",
+    "1. 의료 관련 답변은 반드시 사실 기반으로만 작성해.",
+    "2. 과장, 보장, 확정 표현은 피하고 “개인 상태에 따라 다릅니다”, “정확한 진단이 필요합니다”, “상담 후 결정하는 것이 안전합니다” 같은 표현을 사용해.",
+    "3. “무조건 안전하다”, “부작용 없다”, “100% 효과 있다”, “반드시 좋아진다” 같은 표현은 절대 쓰지 마.",
+    "4. 조롱성 댓글에는 싸우지 말고 짧고 차분하게 응대해.",
+    "5. 광고성 댓글이나 검증 안 된 제품 홍보 댓글에는 의학적으로 주의가 필요하다는 답변을 달아.",
+    "6. 의미가 거의 없거나 단순 반응성 댓글은 답글을 쓰지 말고 코드블럭 안에 “하트”라고만 써줘.",
+    "",
+    "하이스트비뇨의학과 답변 방향:",
+    clinicGuidelines,
+    "",
+    "발기부전 답변 방향:",
+    "1. 발기부전 댓글에는 혈관, 신경, 호르몬, 당뇨, 고혈압, 복용 약물, 심리적 요인 등 원인이 다양하므로 정확한 진단이 중요하다고 답해.",
+    "2. 발기부전 보형물은 처음부터 권하는 치료가 아니라, 약물치료 등으로 효과가 부족한 경우 신중하게 고려하는 치료라고 답해.",
+    "3. 팽창형과 굴곡형의 차이는 간단히 설명하되, 개인 해면체 상태와 선택 가능한 보형물 크기에 따라 결과가 달라질 수 있다고 답해.",
+    "4. 당뇨는 발기부전의 원인이 될 수 있지만 혈당 조절 상태와 전신 건강이 안정적이면 치료나 수술 가능성을 검토할 수 있고 감염 위험과 회복 상태 확인이 중요하다고 답해.",
+    "5. 발기부전 크림, 영양제, 운동법 등 검증이 부족한 방법에는 효과를 단정하기 어렵고 반복되는 증상은 비뇨의학과 진료로 원인을 확인하는 것이 안전하다고 답해.",
+    "6. 성기 운동, 세수공, 기역도 같은 댓글에는 혈류 개선 운동은 도움이 될 수 있지만 성기 길이·굵기를 확실히 늘린다고 보기 어렵고, 무리한 압박이나 견인은 손상 위험이 있어 주의해야 한다고 답해.",
+    "",
+    "하이스트 병원 특장점 반영:",
+    "1. 필요할 때만 자연스럽게 반영하고, 모든 답글에 억지로 넣지 마.",
+    clinicStrengths,
+    "5. 해외 의료진 연수나 수술 노하우 관련 댓글이 나오면, 하이스트 구진모 원장은 동종진피 확대수술 노하우를 국내외 의료진에게 교육해온 경험이 있다는 점을 과장 없이 자연스럽게 언급해.",
+    "6. 병원을 홍보하는 느낌이 너무 강하지 않게, 댓글 질문에 답하는 선에서만 특장점을 넣어.",
+    "",
+    "출력 형식:",
+    "원댓글 내용",
+    "",
+    "```text",
+    "답글 내용",
+    "```",
     "",
     "댓글 후보 목록:",
     commentBlock,
