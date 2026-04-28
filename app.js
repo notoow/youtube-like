@@ -321,50 +321,105 @@ function renderComments() {
   }
 
   const fragment = document.createDocumentFragment();
-  filtered.forEach((comment) => {
-    const card = template.content.cloneNode(true);
-    card.querySelector(".avatar").src = comment.avatar;
-    card.querySelector(".author").textContent = comment.author;
-    card.querySelector(".meta").textContent =
-      `${formatDate(comment.publishedAt)} · ${comment.videoTitle}`;
-    card.querySelector(".commentText").textContent = comment.text;
-    card.querySelector(".likeBadge").textContent =
-      comment.replyCount > 0
-        ? `답글 ${comment.replyCount}개 · 좋아요 ${comment.likeCount}개`
-        : `답글 없음 · 좋아요 ${comment.likeCount}개`;
-    card.querySelector(".watchLink").href =
-      `https://www.youtube.com/watch?v=${comment.videoId}&lc=${comment.id}`;
-    card.querySelector(".studioLink").href =
-      `https://studio.youtube.com/channel/${channelIdInput.value.trim()}/comments/inbox`;
+  const groups = groupCommentsByVideo(filtered);
+  groups.forEach((group) => {
+    const section = document.createElement("section");
+    section.className = "videoGroup";
 
-    const replyForm = card.querySelector(".replyForm");
-    const replyText = card.querySelector(".replyText");
-    const replyButton = card.querySelector(".replyButton");
-    replyForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const text = replyText.value.trim();
-      if (!text) return;
+    const header = document.createElement("header");
+    header.className = "videoGroupHeader";
 
-      replyButton.disabled = true;
-      replyButton.textContent = "전송 중";
-      try {
-        await insertReply({ parentId: comment.id, text });
-        comment.replyCount += 1;
-        replyText.value = "";
-        setStatus("답글 완료", `${comment.author}님의 댓글에 답글을 달았습니다.`);
-        renderComments();
-      } catch (error) {
-        setStatus("답글 실패", explainError(error));
-      } finally {
-        replyButton.disabled = false;
-        replyButton.textContent = "답글 달기";
-      }
+    const titleBlock = document.createElement("div");
+    const title = document.createElement("h2");
+    title.textContent = group.videoTitle;
+    const count = document.createElement("p");
+    count.textContent = `댓글 ${group.comments.length}개 · 최신 ${formatDate(group.latestAt)}`;
+    titleBlock.append(title, count);
+
+    const watch = document.createElement("a");
+    watch.href = `https://www.youtube.com/watch?v=${group.videoId}`;
+    watch.target = "_blank";
+    watch.rel = "noreferrer";
+    watch.textContent = "영상 열기";
+
+    header.append(titleBlock, watch);
+
+    const grid = document.createElement("div");
+    grid.className = "videoComments";
+    group.comments.forEach((comment) => {
+      grid.append(renderCommentCard(comment));
     });
 
-    fragment.append(card);
+    section.append(header, grid);
+    fragment.append(section);
   });
 
   results.append(fragment);
+}
+
+function groupCommentsByVideo(commentList) {
+  const byVideo = new Map();
+
+  commentList.forEach((comment) => {
+    if (!byVideo.has(comment.videoId)) {
+      byVideo.set(comment.videoId, {
+        videoId: comment.videoId,
+        videoTitle: comment.videoTitle,
+        latestAt: comment.publishedAt,
+        comments: [],
+      });
+    }
+
+    const group = byVideo.get(comment.videoId);
+    group.comments.push(comment);
+    if (new Date(comment.publishedAt) > new Date(group.latestAt)) {
+      group.latestAt = comment.publishedAt;
+    }
+  });
+
+  return [...byVideo.values()].sort((a, b) => new Date(b.latestAt) - new Date(a.latestAt));
+}
+
+function renderCommentCard(comment) {
+  const card = template.content.cloneNode(true);
+  card.querySelector(".avatar").src = comment.avatar;
+  card.querySelector(".author").textContent = comment.author;
+  card.querySelector(".meta").textContent = formatDate(comment.publishedAt);
+  card.querySelector(".commentText").textContent = comment.text;
+  card.querySelector(".likeBadge").textContent =
+    comment.replyCount > 0
+      ? `답글 ${comment.replyCount}개 · 좋아요 ${comment.likeCount}개`
+      : `답글 없음 · 좋아요 ${comment.likeCount}개`;
+  card.querySelector(".watchLink").href =
+    `https://www.youtube.com/watch?v=${comment.videoId}&lc=${comment.id}`;
+  card.querySelector(".studioLink").href =
+    `https://studio.youtube.com/channel/${channelIdInput.value.trim()}/comments/inbox`;
+
+  const replyForm = card.querySelector(".replyForm");
+  const replyText = card.querySelector(".replyText");
+  const replyButton = card.querySelector(".replyButton");
+  replyForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const text = replyText.value.trim();
+    if (!text) return;
+
+    replyButton.disabled = true;
+    replyButton.textContent = "전송 중";
+    try {
+      await insertReply({ parentId: comment.id, text });
+      comment.replyCount += 1;
+      replyText.value = "";
+      setStatus("답글 완료", `${comment.author}님의 댓글에 답글을 달았습니다.`);
+      renderComments();
+    } catch (error) {
+      setStatus("답글 실패", explainError(error));
+    } finally {
+      replyButton.disabled = false;
+      replyButton.textContent = "답글 달기";
+    }
+  });
+
+  return card;
 }
 
 function renderEmpty(message) {
