@@ -5,16 +5,35 @@ const STORAGE_KEYS = {
   clientId: "yt-heart-helper-client-id",
   clinicGuidelines: "yt-heart-helper-clinic-guidelines",
   clinicStrengths: "yt-heart-helper-clinic-strengths",
+  clinicDefaultsVersion: "yt-heart-helper-clinic-defaults-version",
 };
 
 const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
 const OWNER_REPLY_HANDLE = "@논현동구원장";
+const CLINIC_DEFAULTS_VERSION = "2026-05-07-stem-cell-ed-injection";
+const DEFAULT_CHANNELS = [
+  {
+    name: "하이스트 비뇨의학과",
+    id: "https://www.youtube.com/channel/UCFCMjPa9xYNKkGQLHAQRTuw",
+  },
+  {
+    name: "논현동구원장",
+    id: "https://www.youtube.com/@논현동구원장",
+  },
+  {
+    name: "Mens BodyLab",
+    id: "https://www.youtube.com/@Mens_BodyLab",
+  },
+];
 const DEFAULT_CLINIC_GUIDELINES = [
   "하이스트비뇨의학과는 안전성을 가장 중요하게 생각하는 병원이라는 톤을 유지한다.",
   "성기확대는 “무조건 크게”가 아니라 안전성, 자연스러움, 귀두·몸통·길이의 전체 비율, 개인 조직 상태를 함께 본다는 방향으로 답한다.",
   "성기확대 재료는 돼지진피 같은 이종진피를 사용하지 않고, 감염 예방과 자연스러운 결과를 고려해 동종진피를 사용한다는 점을 자연스럽게 반영한다.",
+  "성기확대에서 자가지방 생착을 돕기 위한 줄기세포 보조 수술 옵션을 상담할 수 있으며, 줄기세포는 지방 생착을 도와주는 보조적 역할로 설명한다.",
+  "줄기세포, 자가지방 생착, 확대 결과를 설명할 때 생착 보장·확대 보장처럼 과장하거나 확정적으로 표현하지 않는다.",
   "필러, 진피분말, 지방, 실리콘, 구슬, 링 관련 댓글에는 뭉침·쏠림·흡수·이물감·통증·상대방 불편감·제거 어려움 등이 생길 수 있어 신중해야 한다고 답한다.",
-  "발기부전 치료에서 주사치료는 시행하지 않고, 약물치료 등 환자 상태에 맞는 치료 방향으로 상담한다.",
+  "발기부전 치료에서는 주사치료를 시행하며, 약물치료 등 환자 상태에 맞는 치료 옵션을 함께 상담한다.",
+  "줄기세포 연구실을 운영 중이라는 점은 필요할 때만 사실 범위에서 과장 없이 짧게 언급한다.",
   "의미가 거의 없거나 단순 반응성 댓글은 답글 대신 하트만 권장한다.",
 ];
 const DEFAULT_CLINIC_STRENGTHS = [
@@ -22,6 +41,9 @@ const DEFAULT_CLINIC_STRENGTHS = [
   "의사가 직접 상태를 보고 상담하며, 개인의 해부학적 구조와 목표에 맞춰 계획한다.",
   "재료 선택, 수술 범위, 귀두와 몸통의 비율, 피부 여유, 기존 수술 여부, 재수술 가능성까지 종합적으로 본다.",
   "안전성, 자연스러움, 감염 예방, 사후관리, 현실적인 기대치 설정을 중요하게 생각한다.",
+  "줄기세포 연구실을 운영하며 관련 연구를 이어가고 있다는 점을 과장 없이 반영한다.",
+  "자가지방 생착을 보조하는 줄기세포 연구와 수술 옵션을 병원 강점으로 설명할 수 있다.",
+  "발기부전 치료 옵션을 약물치료와 주사치료 등으로 넓혀 환자 상태에 맞춰 상담한다.",
 ];
 
 const form = document.querySelector("#settingsForm");
@@ -56,6 +78,7 @@ function init() {
   clientIdInput.value =
     localStorage.getItem(STORAGE_KEYS.clientId) || clientIdInput.value;
   hydrateChannels();
+  migrateClinicDefaults();
   clinicGuidelines = readRuleList(STORAGE_KEYS.clinicGuidelines, DEFAULT_CLINIC_GUIDELINES);
   clinicStrengths = readRuleList(STORAGE_KEYS.clinicStrengths, DEFAULT_CLINIC_STRENGTHS);
   renderAllRuleLists();
@@ -129,6 +152,7 @@ clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.clientId);
   localStorage.removeItem(STORAGE_KEYS.clinicGuidelines);
   localStorage.removeItem(STORAGE_KEYS.clinicStrengths);
+  localStorage.setItem(STORAGE_KEYS.clinicDefaultsVersion, CLINIC_DEFAULTS_VERSION);
   accessToken = "";
   apiKeyInput.value = "";
   clientIdInput.value =
@@ -186,16 +210,7 @@ function hydrateChannels() {
     }
   }
 
-  if (!Array.isArray(channels) || channels.length === 0) {
-    channels = [
-      {
-        name: "하이스트 비뇨의학과",
-        id: legacyId || channelIdInput.value,
-      },
-      { name: "", id: "" },
-      { name: "", id: "" },
-    ];
-  }
+  channels = normalizeStoredChannels(channels, legacyId);
 
   channelNameInputs.forEach((input, index) => {
     input.value = channels[index]?.name || "";
@@ -203,6 +218,28 @@ function hydrateChannels() {
   channelIdInputs.forEach((input, index) => {
     input.value = channels[index]?.id || "";
   });
+}
+
+function normalizeStoredChannels(channels, legacyId = "") {
+  const defaults = getDefaultChannels(legacyId);
+  if (!Array.isArray(channels) || channels.length === 0) return defaults;
+
+  return defaults.map((defaultChannel, index) => {
+    const stored = channels[index] || {};
+    const name = String(stored.name || "").trim();
+    const id = String(stored.id || "").trim();
+    return {
+      name: name || defaultChannel.name,
+      id: id || defaultChannel.id,
+    };
+  });
+}
+
+function getDefaultChannels(legacyId = "") {
+  return DEFAULT_CHANNELS.map((channel, index) => ({
+    ...channel,
+    id: index === 0 && legacyId ? legacyId : channel.id,
+  }));
 }
 
 function getConfiguredChannels() {
@@ -225,11 +262,7 @@ function saveChannels(channels = getConfiguredChannels()) {
 }
 
 function resetChannelInputs() {
-  const defaults = [
-    { name: "하이스트 비뇨의학과", id: "UCFCMjPa9xYNKkGQLHAQRTuw" },
-    { name: "", id: "" },
-    { name: "", id: "" },
-  ];
+  const defaults = getDefaultChannels();
   channelNameInputs.forEach((input, index) => {
     input.value = defaults[index].name;
   });
@@ -256,6 +289,38 @@ function readRuleList(storageKey, defaults) {
   }
 
   return [...defaults];
+}
+
+function migrateClinicDefaults() {
+  if (localStorage.getItem(STORAGE_KEYS.clinicDefaultsVersion) === CLINIC_DEFAULTS_VERSION) {
+    return;
+  }
+
+  const currentGuidelines = readRuleList(
+    STORAGE_KEYS.clinicGuidelines,
+    DEFAULT_CLINIC_GUIDELINES,
+  );
+  const currentStrengths = readRuleList(
+    STORAGE_KEYS.clinicStrengths,
+    DEFAULT_CLINIC_STRENGTHS,
+  );
+  const nextGuidelines = mergeUpdatedRules(currentGuidelines, DEFAULT_CLINIC_GUIDELINES, [
+    "주사치료는 시행하지 않고",
+  ]);
+  const nextStrengths = mergeUpdatedRules(currentStrengths, DEFAULT_CLINIC_STRENGTHS);
+
+  localStorage.setItem(STORAGE_KEYS.clinicGuidelines, JSON.stringify(nextGuidelines));
+  localStorage.setItem(STORAGE_KEYS.clinicStrengths, JSON.stringify(nextStrengths));
+  localStorage.setItem(STORAGE_KEYS.clinicDefaultsVersion, CLINIC_DEFAULTS_VERSION);
+}
+
+function mergeUpdatedRules(current, defaults, removeSnippets = []) {
+  const next = [...defaults];
+  sanitizeRules(current).forEach((rule) => {
+    if (removeSnippets.some((snippet) => rule.includes(snippet))) return;
+    if (!next.includes(rule)) next.push(rule);
+  });
+  return next;
 }
 
 function sanitizeRules(items) {
@@ -449,17 +514,14 @@ function refreshIcons() {
 }
 
 async function fetchChannelVideos({ apiKey, channel, videoScope }) {
-  const channelParams = new URLSearchParams({
-    key: apiKey,
-    part: "contentDetails",
-    id: channel.id,
+  const resolvedChannel = await resolveChannel({ apiKey, channel });
+  Object.assign(channel, {
+    id: resolvedChannel.id,
+    input: resolvedChannel.input,
+    name: resolvedChannel.name,
   });
-  const channelData = await getJson(
-    `https://www.googleapis.com/youtube/v3/channels?${channelParams}`,
-  );
-  const uploadsPlaylistId =
-    channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
+  const uploadsPlaylistId = resolvedChannel.uploadsPlaylistId;
   if (!uploadsPlaylistId) {
     throw new Error("채널의 업로드 재생목록을 찾지 못했습니다.");
   }
@@ -487,9 +549,9 @@ async function fetchChannelVideos({ apiKey, channel, videoScope }) {
       if (!videoId) continue;
       videos.push({
         id: videoId,
-        channelId: channel.id,
-        channelName: channel.name,
-        channelIndex: channel.index,
+        channelId: resolvedChannel.id,
+        channelName: resolvedChannel.name,
+        channelIndex: resolvedChannel.index,
         title: item.snippet?.title || "제목 없음",
         thumbnail: pickThumbnail(item.snippet?.thumbnails),
         publishedAt: item.contentDetails?.videoPublishedAt || item.snippet?.publishedAt,
@@ -497,13 +559,81 @@ async function fetchChannelVideos({ apiKey, channel, videoScope }) {
       if (videos.length >= limit) break;
     }
 
-    setStatus("영상 확인 중", `영상 ${videos.length}개를 찾았습니다.`);
+    setStatus("영상 확인 중", `${resolvedChannel.name} 영상 ${videos.length}개를 찾았습니다.`);
 
     pageToken = data.nextPageToken || "";
     if (!pageToken) break;
   }
 
   return videos;
+}
+
+async function resolveChannel({ apiKey, channel }) {
+  const parsed = parseChannelInput(channel.id);
+  const channelParams = new URLSearchParams({
+    key: apiKey,
+    part: "snippet,contentDetails",
+  });
+
+  if (parsed.type === "handle") {
+    channelParams.set("forHandle", `@${parsed.value}`);
+  } else {
+    channelParams.set("id", parsed.value);
+  }
+
+  const channelData = await getJson(
+    `https://www.googleapis.com/youtube/v3/channels?${channelParams}`,
+  );
+  const item = channelData.items?.[0];
+
+  if (!item?.id) {
+    throw new Error(`${channel.name || "채널"}을 찾지 못했습니다. 채널 URL, @핸들, UC 채널 ID를 확인해주세요.`);
+  }
+
+  return {
+    id: item.id,
+    input: channel.id,
+    index: channel.index,
+    name: channel.name || item.snippet?.title || item.id,
+    uploadsPlaylistId: item.contentDetails?.relatedPlaylists?.uploads || "",
+  };
+}
+
+function parseChannelInput(value) {
+  const input = String(value || "").trim();
+  if (!input) throw new Error("채널 URL, @핸들, UC 채널 ID를 입력해주세요.");
+
+  const normalized = getChannelPathOrInput(input);
+  const channelIdMatch =
+    normalized.match(/(?:^|\/)channel\/(UC[\w-]{20,})/i) ||
+    normalized.match(/^(UC[\w-]{20,})$/i);
+  if (channelIdMatch) {
+    return { type: "id", value: channelIdMatch[1] };
+  }
+
+  const handleMatch = normalized.match(/(?:^|\/)@([^/?#]+)/) || normalized.match(/^@(.+)$/);
+  if (handleMatch) {
+    return { type: "handle", value: stripHandle(handleMatch[1]) };
+  }
+
+  if (!normalized.includes("/")) {
+    return { type: "handle", value: stripHandle(normalized) };
+  }
+
+  throw new Error("지원하는 채널 입력 형식은 채널 URL, @핸들 URL, @핸들, UC 채널 ID입니다.");
+}
+
+function getChannelPathOrInput(input) {
+  try {
+    const url = new URL(input);
+    return decodeURIComponent(url.pathname);
+  } catch {
+    return input;
+  }
+}
+
+function stripHandle(value) {
+  return String(value || "").replace(/^@/, "").replace(/\/.*$/, "").trim();
 }
 
 async function fetchCommentsForVideos({ apiKey, videos, channel }) {
@@ -1011,12 +1141,13 @@ function buildAiReplyPrompt() {
     clinicGuidelineText,
     "",
     "발기부전 답변 방향:",
-    "1. 발기부전 댓글에는 혈관, 신경, 호르몬, 당뇨, 고혈압, 복용 약물, 심리적 요인 등 원인이 다양하므로 정확한 진단이 중요하다고 답해.",
-    "2. 발기부전 보형물은 처음부터 권하는 치료가 아니라, 약물치료 등으로 효과가 부족한 경우 신중하게 고려하는 치료라고 답해.",
-    "3. 팽창형과 굴곡형의 차이는 간단히 설명하되, 개인 해면체 상태와 선택 가능한 보형물 크기에 따라 결과가 달라질 수 있다고 답해.",
-    "4. 당뇨는 발기부전의 원인이 될 수 있지만 혈당 조절 상태와 전신 건강이 안정적이면 치료나 수술 가능성을 검토할 수 있고 감염 위험과 회복 상태 확인이 중요하다고 답해.",
-    "5. 발기부전 크림, 영양제, 운동법 등 검증이 부족한 방법에는 효과를 단정하기 어렵고 반복되는 증상은 비뇨의학과 진료로 원인을 확인하는 것이 안전하다고 답해.",
-    "6. 성기 운동, 세수공, 기역도 같은 댓글에는 혈류 개선 운동은 도움이 될 수 있지만 성기 길이·굵기를 확실히 늘린다고 보기 어렵고, 무리한 압박이나 견인은 손상 위험이 있어 주의해야 한다고 답해.",
+    "1. 발기부전 치료는 약물치료와 주사치료 등 여러 옵션을 환자 상태에 맞춰 상담한다고 답해.",
+    "2. 발기부전 댓글에는 혈관, 신경, 호르몬, 당뇨, 고혈압, 복용 약물, 심리적 요인 등 원인이 다양하므로 정확한 진단이 중요하다고 답해.",
+    "3. 발기부전 보형물은 처음부터 권하는 치료가 아니라, 약물치료나 주사치료 등으로 효과가 부족한 경우 신중하게 고려하는 치료라고 답해.",
+    "4. 팽창형과 굴곡형의 차이는 간단히 설명하되, 개인 해면체 상태와 선택 가능한 보형물 크기에 따라 결과가 달라질 수 있다고 답해.",
+    "5. 당뇨는 발기부전의 원인이 될 수 있지만 혈당 조절 상태와 전신 건강이 안정적이면 치료나 수술 가능성을 검토할 수 있고 감염 위험과 회복 상태 확인이 중요하다고 답해.",
+    "6. 발기부전 크림, 영양제, 운동법 등 검증이 부족한 방법에는 효과를 단정하기 어렵고 반복되는 증상은 비뇨의학과 진료로 원인을 확인하는 것이 안전하다고 답해.",
+    "7. 성기 운동, 세수공, 기역도 같은 댓글에는 혈류 개선 운동은 도움이 될 수 있지만 성기 길이·굵기를 확실히 늘린다고 보기 어렵고, 무리한 압박이나 견인은 손상 위험이 있어 주의해야 한다고 답해.",
     "",
     "하이스트 병원 특장점 반영:",
     clinicStrengthText,
