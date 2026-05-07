@@ -1,6 +1,7 @@
 const STORAGE_KEYS = {
   apiKey: "yt-heart-helper-api-key",
   channelId: "yt-heart-helper-channel-id",
+  channels: "yt-heart-helper-channels",
   clientId: "yt-heart-helper-client-id",
   clinicGuidelines: "yt-heart-helper-clinic-guidelines",
   clinicStrengths: "yt-heart-helper-clinic-strengths",
@@ -27,6 +28,8 @@ const form = document.querySelector("#settingsForm");
 const apiKeyInput = document.querySelector("#apiKey");
 const clientIdInput = document.querySelector("#clientId");
 const channelIdInput = document.querySelector("#channelId");
+const channelNameInputs = [...document.querySelectorAll(".channelNameInput")];
+const channelIdInputs = [...document.querySelectorAll(".channelIdInput")];
 const videoScopeInput = document.querySelector("#videoScope");
 const statusTitle = document.querySelector("#statusTitle");
 const statusDetail = document.querySelector("#statusDetail");
@@ -43,6 +46,7 @@ let activeFilter = "all";
 let accessToken = "";
 let clinicGuidelines = [];
 let clinicStrengths = [];
+let activeChannels = [];
 
 init();
 window.addEventListener("load", refreshIcons);
@@ -51,8 +55,7 @@ function init() {
   apiKeyInput.value = localStorage.getItem(STORAGE_KEYS.apiKey) || "";
   clientIdInput.value =
     localStorage.getItem(STORAGE_KEYS.clientId) || clientIdInput.value;
-  channelIdInput.value =
-    localStorage.getItem(STORAGE_KEYS.channelId) || channelIdInput.value;
+  hydrateChannels();
   clinicGuidelines = readRuleList(STORAGE_KEYS.clinicGuidelines, DEFAULT_CLINIC_GUIDELINES);
   clinicStrengths = readRuleList(STORAGE_KEYS.clinicStrengths, DEFAULT_CLINIC_STRENGTHS);
   renderAllRuleLists();
@@ -73,33 +76,43 @@ form.addEventListener("submit", async (event) => {
 
   const apiKey = apiKeyInput.value.trim();
   const clientId = clientIdInput.value.trim();
-  const channelId = channelIdInput.value.trim();
+  const channels = getConfiguredChannels();
   const videoScope = videoScopeInput.value;
 
-  if (!apiKey || !clientId || !channelId) {
-    setStatus("입력 필요", "API 키, OAuth 클라이언트 ID, 채널 ID를 모두 입력해주세요.");
+  if (!apiKey || !clientId || channels.length === 0) {
+    setStatus("입력 필요", "API 키, OAuth 클라이언트 ID, 채널 ID를 하나 이상 입력해주세요.");
     return;
   }
 
   localStorage.setItem(STORAGE_KEYS.apiKey, apiKey);
   localStorage.setItem(STORAGE_KEYS.clientId, clientId);
-  localStorage.setItem(STORAGE_KEYS.channelId, channelId);
+  saveChannels(channels);
 
   try {
     setLoading(true);
     comments = [];
+    activeChannels = channels;
     renderEmpty("댓글을 가져오는 중입니다.");
 
-    setStatus("영상 확인 중", "채널의 업로드 영상 목록을 가져오고 있습니다.");
-    const videos = await fetchChannelVideos({ apiKey, channelId, videoScope });
+    const collected = [];
+    for (const [channelIndex, channel] of channels.entries()) {
+      setStatus(
+        "영상 확인 중",
+        `${channel.name} 채널의 업로드 영상 목록을 가져오고 있습니다. (${channelIndex + 1}/${channels.length})`,
+      );
+      const videos = await fetchChannelVideos({ apiKey, channel, videoScope });
 
-    setStatus(
-      "댓글 확인 중",
-      `${videos.length}개 영상에서 댓글을 끝까지 가져오고 있습니다. 영상이 많으면 시간이 걸립니다.`,
-    );
-    comments = await fetchCommentsForVideos({ apiKey, videos });
+      setStatus(
+        "댓글 확인 중",
+        `${channel.name} 채널의 ${videos.length}개 영상에서 댓글을 가져오고 있습니다.`,
+      );
+      const channelComments = await fetchCommentsForVideos({ apiKey, videos, channel });
+      collected.push(...channelComments);
+    }
+
+    comments = collected.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
     renderComments();
-    setStatus("완료", `${videos.length}개 영상에서 댓글 ${comments.length}개를 불러왔습니다.`);
+    setStatus("완료", `${channels.length}개 채널에서 댓글 ${comments.length}개를 불러왔습니다.`);
   } catch (error) {
     console.error(error);
     renderEmpty("댓글을 불러오지 못했습니다.");
@@ -112,6 +125,7 @@ form.addEventListener("submit", async (event) => {
 clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.apiKey);
   localStorage.removeItem(STORAGE_KEYS.channelId);
+  localStorage.removeItem(STORAGE_KEYS.channels);
   localStorage.removeItem(STORAGE_KEYS.clientId);
   localStorage.removeItem(STORAGE_KEYS.clinicGuidelines);
   localStorage.removeItem(STORAGE_KEYS.clinicStrengths);
@@ -119,7 +133,8 @@ clearButton.addEventListener("click", () => {
   apiKeyInput.value = "";
   clientIdInput.value =
     "550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com";
-  channelIdInput.value = "UCFCMjPa9xYNKkGQLHAQRTuw";
+  resetChannelInputs();
+  activeChannels = [];
   clinicGuidelines = [...DEFAULT_CLINIC_GUIDELINES];
   clinicStrengths = [...DEFAULT_CLINIC_STRENGTHS];
   renderAllRuleLists();
@@ -156,6 +171,75 @@ filterButtons.forEach((button) => {
     filterButtons.forEach((item) => item.classList.toggle("active", item === button));
     renderComments();
   });
+});
+
+function hydrateChannels() {
+  const stored = localStorage.getItem(STORAGE_KEYS.channels);
+  const legacyId = localStorage.getItem(STORAGE_KEYS.channelId);
+  let channels = [];
+
+  if (stored) {
+    try {
+      channels = JSON.parse(stored);
+    } catch {
+      channels = [];
+    }
+  }
+
+  if (!Array.isArray(channels) || channels.length === 0) {
+    channels = [
+      {
+        name: "하이스트 비뇨의학과",
+        id: legacyId || channelIdInput.value,
+      },
+      { name: "", id: "" },
+      { name: "", id: "" },
+    ];
+  }
+
+  channelNameInputs.forEach((input, index) => {
+    input.value = channels[index]?.name || "";
+  });
+  channelIdInputs.forEach((input, index) => {
+    input.value = channels[index]?.id || "";
+  });
+}
+
+function getConfiguredChannels() {
+  return channelIdInputs
+    .map((input, index) => {
+      const id = input.value.trim();
+      const name = channelNameInputs[index]?.value.trim() || `채널 ${index + 1}`;
+      return id ? { id, name, index } : null;
+    })
+    .filter(Boolean);
+}
+
+function saveChannels(channels = getConfiguredChannels()) {
+  const padded = [0, 1, 2].map((index) => ({
+    name: channelNameInputs[index]?.value.trim() || channels.find((item) => item.index === index)?.name || "",
+    id: channelIdInputs[index]?.value.trim() || channels.find((item) => item.index === index)?.id || "",
+  }));
+  localStorage.setItem(STORAGE_KEYS.channels, JSON.stringify(padded));
+  localStorage.setItem(STORAGE_KEYS.channelId, padded[0]?.id || "");
+}
+
+function resetChannelInputs() {
+  const defaults = [
+    { name: "하이스트 비뇨의학과", id: "UCFCMjPa9xYNKkGQLHAQRTuw" },
+    { name: "", id: "" },
+    { name: "", id: "" },
+  ];
+  channelNameInputs.forEach((input, index) => {
+    input.value = defaults[index].name;
+  });
+  channelIdInputs.forEach((input, index) => {
+    input.value = defaults[index].id;
+  });
+}
+
+[...channelNameInputs, ...channelIdInputs].forEach((input) => {
+  input.addEventListener("change", () => saveChannels());
 });
 
 function readRuleList(storageKey, defaults) {
@@ -364,11 +448,11 @@ function refreshIcons() {
   window.lucide?.createIcons();
 }
 
-async function fetchChannelVideos({ apiKey, channelId, videoScope }) {
+async function fetchChannelVideos({ apiKey, channel, videoScope }) {
   const channelParams = new URLSearchParams({
     key: apiKey,
     part: "contentDetails",
-    id: channelId,
+    id: channel.id,
   });
   const channelData = await getJson(
     `https://www.googleapis.com/youtube/v3/channels?${channelParams}`,
@@ -403,6 +487,9 @@ async function fetchChannelVideos({ apiKey, channelId, videoScope }) {
       if (!videoId) continue;
       videos.push({
         id: videoId,
+        channelId: channel.id,
+        channelName: channel.name,
+        channelIndex: channel.index,
         title: item.snippet?.title || "제목 없음",
         thumbnail: pickThumbnail(item.snippet?.thumbnails),
         publishedAt: item.contentDetails?.videoPublishedAt || item.snippet?.publishedAt,
@@ -419,7 +506,7 @@ async function fetchChannelVideos({ apiKey, channelId, videoScope }) {
   return videos;
 }
 
-async function fetchCommentsForVideos({ apiKey, videos }) {
+async function fetchCommentsForVideos({ apiKey, videos, channel }) {
   const collected = [];
 
   for (const [index, video] of videos.entries()) {
@@ -427,7 +514,7 @@ async function fetchCommentsForVideos({ apiKey, videos }) {
     collected.push(...videoComments);
     setStatus(
       "댓글 확인 중",
-      `${index + 1}/${videos.length}개 영상 처리 완료, 댓글 ${collected.length}개 수집.`,
+      `${channel.name} ${index + 1}/${videos.length}개 영상 처리 완료, 댓글 ${collected.length}개 수집.`,
     );
   }
 
@@ -482,6 +569,9 @@ async function normalizeComment(item, video, apiKey) {
 
   return {
     id: item.id,
+    channelId: video.channelId,
+    channelName: video.channelName,
+    channelIndex: video.channelIndex,
     videoId: video.id,
     videoTitle: decodeHtml(video.title),
     videoThumbnail: video.thumbnail,
@@ -624,50 +714,113 @@ function renderComments() {
   }
 
   const fragment = document.createDocumentFragment();
-  const groups = groupCommentsByVideo(filtered);
-  groups.forEach((group) => {
-    const section = document.createElement("section");
-    section.className = "videoGroup";
-
-    const header = document.createElement("header");
-    header.className = "videoGroupHeader";
-
-    const thumbnail = document.createElement("img");
-    thumbnail.className = "videoThumb";
-    thumbnail.alt = "";
-    thumbnail.src = group.videoThumbnail || "";
-
-    const titleBlock = document.createElement("div");
-    titleBlock.className = "videoGroupTitle";
-    const title = document.createElement("h2");
-    title.textContent = group.videoTitle;
-    const count = document.createElement("p");
-    count.textContent = `댓글 ${group.comments.length}개 · 최신 ${formatDate(group.latestAt)}`;
-    titleBlock.append(title, count);
-
-    const watch = document.createElement("a");
-    watch.href = `https://www.youtube.com/watch?v=${group.videoId}`;
-    watch.target = "_blank";
-    watch.rel = "noreferrer";
-    watch.textContent = "영상 열기";
-
-    const media = document.createElement("div");
-    media.className = "videoGroupMedia";
-    media.append(thumbnail, titleBlock);
-
-    header.append(media, watch);
-
-    const grid = document.createElement("div");
-    grid.className = "videoComments";
-    group.comments.forEach((comment) => {
-      grid.append(renderCommentCard(comment));
-    });
-
-    section.append(header, grid);
-    fragment.append(section);
+  const channelGroups = groupCommentsByChannel(filtered);
+  channelGroups.forEach((channel) => {
+    fragment.append(renderChannelColumn(channel));
   });
 
   results.append(fragment);
+}
+
+function groupCommentsByChannel(commentList) {
+  const configured = activeChannels.length ? activeChannels : getConfiguredChannels();
+  const byChannel = new Map();
+
+  configured.forEach((channel) => {
+    byChannel.set(channel.id, {
+      id: channel.id,
+      name: channel.name,
+      index: channel.index,
+      comments: [],
+    });
+  });
+
+  commentList.forEach((comment) => {
+    if (!byChannel.has(comment.channelId)) {
+      byChannel.set(comment.channelId, {
+        id: comment.channelId,
+        name: comment.channelName || "채널",
+        index: comment.channelIndex ?? byChannel.size,
+        comments: [],
+      });
+    }
+    byChannel.get(comment.channelId).comments.push(comment);
+  });
+
+  return [...byChannel.values()].sort((a, b) => a.index - b.index);
+}
+
+function renderChannelColumn(channel) {
+  const column = document.createElement("section");
+  column.className = "channelColumn";
+
+  const header = document.createElement("header");
+  header.className = "channelColumnHeader";
+  const title = document.createElement("h2");
+  title.textContent = channel.name;
+  const count = document.createElement("p");
+  count.textContent = `댓글 ${channel.comments.length}개`;
+  header.append(title, count);
+
+  const body = document.createElement("div");
+  body.className = "channelColumnBody";
+
+  if (channel.comments.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "channelEmpty";
+    empty.textContent = "조건에 맞는 댓글이 없습니다.";
+    body.append(empty);
+  } else {
+    const groups = groupCommentsByVideo(channel.comments);
+    groups.forEach((group) => {
+      body.append(renderVideoGroup(group));
+    });
+  }
+
+  column.append(header, body);
+  return column;
+}
+
+function renderVideoGroup(group) {
+  const section = document.createElement("section");
+  section.className = "videoGroup";
+
+  const header = document.createElement("header");
+  header.className = "videoGroupHeader";
+
+  const thumbnail = document.createElement("img");
+  thumbnail.className = "videoThumb";
+  thumbnail.alt = "";
+  thumbnail.src = group.videoThumbnail || "";
+
+  const titleBlock = document.createElement("div");
+  titleBlock.className = "videoGroupTitle";
+  const title = document.createElement("h2");
+  title.textContent = group.videoTitle;
+  const count = document.createElement("p");
+  count.textContent = `댓글 ${group.comments.length}개 · 최신 ${formatDate(group.latestAt)}`;
+  titleBlock.append(title, count);
+
+  const watch = document.createElement("a");
+  watch.href = `https://www.youtube.com/watch?v=${group.videoId}`;
+  watch.target = "_blank";
+  watch.rel = "noreferrer";
+  watch.textContent = "영상";
+
+  const media = document.createElement("div");
+  media.className = "videoGroupMedia";
+  media.append(thumbnail, titleBlock);
+
+  header.append(media, watch);
+
+  const grid = document.createElement("div");
+  grid.className = "videoComments";
+  group.comments.forEach((comment) => {
+    grid.append(renderCommentCard(comment));
+  });
+
+  section.append(header, grid);
+  return section;
 }
 
 function groupCommentsByVideo(commentList) {
@@ -711,7 +864,7 @@ function renderCommentCard(comment) {
   card.querySelector(".watchLink").href =
     `https://www.youtube.com/watch?v=${comment.videoId}&lc=${comment.id}`;
   card.querySelector(".studioLink").href =
-    `https://studio.youtube.com/channel/${channelIdInput.value.trim()}/comments/inbox`;
+    `https://studio.youtube.com/channel/${comment.channelId}/comments/inbox`;
 
   const replyForm = card.querySelector(".replyForm");
   const replyText = card.querySelector(".replyText");

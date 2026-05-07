@@ -21,7 +21,8 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--bg);
   color: var(--ink);
 }
@@ -33,12 +34,19 @@ select {
 }
 
 .shell {
-  width: min(1280px, calc(100% - 48px));
+  display: grid;
+  grid-template-rows: auto auto auto auto 1fr;
+  width: min(1720px, calc(100% - 32px));
+  height: 100vh;
   margin: 0 auto;
-  padding: 24px 0 48px;
+  padding: 16px 0;
+  overflow: hidden;
 }
 
 .toolbar {
+  position: sticky;
+  top: 16px;
+  z-index: 5;
   display: grid;
   grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.28fr);
   gap: 28px;
@@ -153,9 +161,27 @@ button:disabled {
 
 .advancedGrid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: 1fr;
   gap: 12px;
   margin-top: 10px;
+}
+
+.channelSettings {
+  display: grid;
+  gap: 8px;
+}
+
+.advancedLabel {
+  margin: 0;
+  color: #4d5560;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.channelConfigGrid {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.7fr) minmax(240px, 1.3fr);
+  gap: 10px 12px;
 }
 
 #loadButton {
@@ -174,6 +200,9 @@ button:hover,
 }
 
 .statusRow {
+  position: sticky;
+  top: 0;
+  z-index: 4;
   display: flex;
   min-height: 64px;
   align-items: center;
@@ -198,6 +227,9 @@ button:hover,
 }
 
 .filters {
+  position: sticky;
+  top: 0;
+  z-index: 4;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -205,6 +237,9 @@ button:hover,
 }
 
 .aiPanel {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: grid;
   grid-template-columns: minmax(220px, 0.62fr) repeat(2, minmax(260px, 1fr)) 160px;
   gap: 14px;
@@ -340,8 +375,58 @@ button:hover,
 
 .results {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 0;
   margin-top: 14px;
+  overflow: hidden;
+}
+
+.channelColumn {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 70%);
+  overflow: hidden;
+}
+
+.channelColumnHeader {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.channelColumnHeader h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.channelColumnHeader p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.channelColumnBody {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.channelEmpty {
+  margin: 0;
+  padding: 24px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  text-align: center;
 }
 
 .videoGroup {
@@ -415,7 +500,7 @@ button:hover,
 
 .videoComments {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 14px;
   padding: 14px;
 }
@@ -577,13 +662,33 @@ button:hover,
 }
 
 @media (max-width: 960px) {
+  body {
+    height: auto;
+    overflow: auto;
+  }
+
+  .shell {
+    height: auto;
+    overflow: visible;
+  }
+
   .toolbar,
   .settings,
   .formActions,
   .advancedGrid,
+  .channelConfigGrid,
   .aiPanel,
+  .results,
   .videoComments {
     grid-template-columns: 1fr;
+  }
+
+  .results {
+    overflow: visible;
+  }
+
+  .channelColumnBody {
+    overflow: visible;
   }
 
   .statusRow {
