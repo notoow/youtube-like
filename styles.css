@@ -19,9 +19,15 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
-  height: 100vh;
+  height: 100%;
+  max-height: 100dvh;
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
@@ -37,7 +43,8 @@ select {
   display: grid;
   grid-template-rows: auto auto auto auto minmax(0, 1fr);
   width: min(1880px, calc(100% - 24px));
-  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   margin: 0 auto;
   padding: 10px 0;
   overflow: hidden;
@@ -421,6 +428,7 @@ button:hover,
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
+  height: 100%;
   min-height: 0;
   margin-top: 8px;
   overflow: hidden;
@@ -429,6 +437,8 @@ button:hover,
 .channelColumn {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  max-height: 100%;
   min-width: 0;
   min-height: 0;
   border: 1px solid var(--line);
@@ -512,6 +522,7 @@ button:hover,
   display: grid;
   align-content: start;
   gap: 10px;
+  height: 100%;
   min-height: 0;
   padding: 10px;
   overflow-y: auto;
@@ -760,13 +771,20 @@ button:hover,
 }
 
 @media (max-width: 960px) {
+  html {
+    height: auto;
+    overflow: auto;
+  }
+
   body {
     height: auto;
+    max-height: none;
     overflow: auto;
   }
 
   .shell {
     height: auto;
+    max-height: none;
     overflow: visible;
   }
 
@@ -782,10 +800,17 @@ button:hover,
   }
 
   .results {
+    height: auto;
     overflow: visible;
   }
 
+  .channelColumn {
+    height: auto;
+    max-height: none;
+  }
+
   .channelColumnBody {
+    height: auto;
     overflow: visible;
   }
 
