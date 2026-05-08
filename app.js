@@ -1060,17 +1060,6 @@ function renderCommentCard(comment) {
   const replyForm = card.querySelector(".replyForm");
   const replyText = card.querySelector(".replyText");
   const replyButton = card.querySelector(".replyButton");
-  const draft = buildReplyDraft(comment);
-
-  if (draft) {
-    replyText.value = draft;
-    replyText.dataset.ghost = "true";
-    replyText.classList.add("ghostDraft");
-    replyText.title = "초안입니다. 클릭하면 바로 수정할 수 있고, 그대로 답글 달기도 가능합니다.";
-  }
-
-  replyText.addEventListener("focus", () => activateDraft(replyText));
-  replyText.addEventListener("input", () => activateDraft(replyText));
   replyForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = replyText.value.trim();
@@ -1094,58 +1083,6 @@ function renderCommentCard(comment) {
   });
 
   return card;
-}
-
-function activateDraft(textarea) {
-  if (textarea.dataset.ghost !== "true") return;
-  textarea.dataset.ghost = "false";
-  textarea.classList.remove("ghostDraft");
-}
-
-function buildReplyDraft(comment) {
-  if (hasOwnerReply(comment)) return "";
-
-  const text = normalizeDraftSource(`${comment.videoTitle} ${comment.text}`);
-  if (matchesAny(text, ["가격", "비용", "얼마", "수술비", "견적"])) {
-    return "비용은 재료, 수술 범위, 기존 상태와 재수술 여부에 따라 달라질 수 있어 진료 후 안내드리는 것이 가장 정확합니다.";
-  }
-  if (matchesAny(text, ["실비", "보험", "청구"])) {
-    return "실비 적용 여부는 진단명, 치료 목적, 가입하신 보험 약관에 따라 달라질 수 있어 보험사와 병원 상담을 함께 확인하는 것이 좋습니다.";
-  }
-  if (matchesAny(text, ["줄기세포", "지방", "생착"])) {
-    return "줄기세포는 자가지방 생착을 도와주는 보조적 역할로 볼 수 있으며, 생착이나 확대 결과를 보장할 수는 없어 개인 상태 확인 후 상담이 필요합니다.";
-  }
-  if (matchesAny(text, ["필러", "진피분말", "실리콘", "구슬", "링"])) {
-    return "각 재료마다 장단점과 한계가 있고 뭉침, 쏠림, 이물감, 통증, 제거 어려움 등이 생길 수 있어 신중하게 상담 후 결정하는 것이 안전합니다.";
-  }
-  if (matchesAny(text, ["귀두"])) {
-    return "귀두도 확대가 가능하지만 구조상 몸통처럼 크게 확대하는 데는 한계가 있어, 안전한 범위 안에서 전체 비율을 맞추는 방식으로 상담합니다.";
-  }
-  if (matchesAny(text, ["길이", "연장"])) {
-    return "길이연장은 발기 시 길이를 타고난 범위 이상으로 크게 늘리는 수술이라기보다, 주로 평상시 길이와 전체 비율 개선을 목표로 상담합니다.";
-  }
-  if (matchesAny(text, ["확대", "크기", "굵기", "작", "왜소"])) {
-    return "확대는 무조건 크게보다 안전성, 자연스러움, 귀두와 몸통의 비율, 개인 조직 상태를 함께 보고 상담 후 결정하는 것이 중요합니다.";
-  }
-  if (matchesAny(text, ["발기", "발기부전", "보형물", "약물", "주사", "당뇨"])) {
-    return "발기부전은 혈관, 신경, 호르몬, 당뇨, 복용 약물, 심리적 요인 등 원인이 다양해 정확한 진단 후 약물치료나 주사치료 등 상태에 맞는 방향으로 상담합니다.";
-  }
-  if (matchesAny(text, ["운동", "젤크", "기역도", "세수공"])) {
-    return "혈류 개선 운동은 일부 도움이 될 수 있지만 길이와 굵기 증가를 확실히 보장하기는 어렵고, 무리한 압박이나 견인은 손상 위험이 있어 주의가 필요합니다.";
-  }
-  if (matchesAny(text, ["ㅋㅋ", "ㅎㅎ", "ㅉㅉ", "노답", "사기", "구라"])) {
-    return "의견 감사합니다. 궁금하신 부분이 있다면 의학적으로 확인 가능한 범위에서 차분히 답변드리겠습니다.";
-  }
-
-  return "개인 상태에 따라 답변이 달라질 수 있어 정확한 진단과 상담 후 결정하는 것이 안전합니다.";
-}
-
-function normalizeDraftSource(value) {
-  return String(value || "").replace(/\s+/g, " ").toLowerCase();
-}
-
-function matchesAny(value, keywords) {
-  return keywords.some((keyword) => value.includes(keyword.toLowerCase()));
 }
 
 function renderReplies(container, replies) {
