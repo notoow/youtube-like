@@ -136,14 +136,14 @@ form.addEventListener("submit", async (event) => {
     const collected = [];
     for (const [channelIndex, channel] of channels.entries()) {
       setStatus(
-        "영상 확인 중",
-        `${channel.name} 채널의 업로드 영상 목록을 가져오고 있습니다. (${channelIndex + 1}/${channels.length})`,
+        "댓글 영상 확인 중",
+        `${channel.name} 채널에서 최근 댓글이 달린 영상 목록을 가져오고 있습니다. (${channelIndex + 1}/${channels.length})`,
       );
       const videos = await fetchChannelVideos({ apiKey, channel, videoScope });
 
       setStatus(
         "댓글 확인 중",
-        `${channel.name} 채널의 ${videos.length}개 영상에서 댓글을 가져오고 있습니다.`,
+        `${channel.name} 채널의 최근 댓글 영상 ${videos.length}개에서 댓글을 가져오고 있습니다.`,
       );
       const channelComments = await fetchCommentsForVideos({ apiKey, videos, channel });
       collected.push(...channelComments);
@@ -537,51 +537,86 @@ async function fetchChannelVideos({ apiKey, channel, videoScope }) {
     name: resolvedChannel.name,
   });
 
-  const uploadsPlaylistId = resolvedChannel.uploadsPlaylistId;
-  if (!uploadsPlaylistId) {
-    throw new Error("채널의 업로드 재생목록을 찾지 못했습니다.");
-  }
+  const limit = Number(videoScope) || 10;
+  const videoIds = await fetchRecentlyCommentedVideoIds({
+    apiKey,
+    channelId: resolvedChannel.id,
+    channelName: resolvedChannel.name,
+    limit,
+  });
 
-  const limit = videoScope === "all" ? Infinity : Number(videoScope);
-  const videos = [];
+  return fetchVideoDetailsByIds({
+    apiKey,
+    videoIds,
+    channel: resolvedChannel,
+  });
+}
+
+async function fetchRecentlyCommentedVideoIds({ apiKey, channelId, channelName, limit }) {
+  const videoIds = [];
+  const seen = new Set();
   let pageToken = "";
 
-  while (videos.length < limit) {
+  while (videoIds.length < limit) {
     const params = new URLSearchParams({
       key: apiKey,
-      part: "snippet,contentDetails",
-      playlistId: uploadsPlaylistId,
-      maxResults: "50",
+      part: "snippet",
+      allThreadsRelatedToChannelId: channelId,
+      maxResults: "100",
+      order: "time",
+      textFormat: "plainText",
     });
 
     if (pageToken) params.set("pageToken", pageToken);
 
     const data = await getJson(
-      `https://www.googleapis.com/youtube/v3/playlistItems?${params}`,
+      `https://www.googleapis.com/youtube/v3/commentThreads?${params}`,
     );
 
     for (const item of data.items || []) {
-      const videoId = item.contentDetails?.videoId;
-      if (!videoId) continue;
-      videos.push({
-        id: videoId,
-        channelId: resolvedChannel.id,
-        channelName: resolvedChannel.name,
-        channelIndex: resolvedChannel.index,
-        title: item.snippet?.title || "제목 없음",
-        thumbnail: pickThumbnail(item.snippet?.thumbnails),
-        publishedAt: item.contentDetails?.videoPublishedAt || item.snippet?.publishedAt,
-      });
-      if (videos.length >= limit) break;
+      const videoId = item.snippet?.videoId;
+      if (!videoId || seen.has(videoId)) continue;
+      seen.add(videoId);
+      videoIds.push(videoId);
+      if (videoIds.length >= limit) break;
     }
 
-    setStatus("영상 확인 중", `${resolvedChannel.name} 영상 ${videos.length}개를 찾았습니다.`);
+    setStatus("댓글 영상 확인 중", `${channelName} 최근 댓글 기준 영상 ${videoIds.length}개를 찾았습니다.`);
 
     pageToken = data.nextPageToken || "";
     if (!pageToken) break;
   }
 
-  return videos;
+  return videoIds;
+}
+
+async function fetchVideoDetailsByIds({ apiKey, videoIds, channel }) {
+  if (!videoIds.length) return [];
+
+  const details = new Map();
+  for (let index = 0; index < videoIds.length; index += 50) {
+    const batch = videoIds.slice(index, index + 50);
+    const params = new URLSearchParams({
+      key: apiKey,
+      part: "snippet",
+      id: batch.join(","),
+    });
+    const data = await getJson(`https://www.googleapis.com/youtube/v3/videos?${params}`);
+
+    for (const item of data.items || []) {
+      details.set(item.id, {
+        id: item.id,
+        channelId: channel.id,
+        channelName: channel.name,
+        channelIndex: channel.index,
+        title: item.snippet?.title || "제목 없음",
+        thumbnail: pickThumbnail(item.snippet?.thumbnails),
+        publishedAt: item.snippet?.publishedAt,
+      });
+    }
+  }
+
+  return videoIds.map((videoId) => details.get(videoId)).filter(Boolean);
 }
 
 async function resolveChannel({ apiKey, channel }) {
