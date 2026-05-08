@@ -9,7 +9,13 @@ const STORAGE_KEYS = {
 };
 
 const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
-const OWNER_REPLY_HANDLE = "@논현동구원장";
+const OWNER_REPLY_HANDLES = [
+  "@논현동구원장",
+  "@Mens_BodyLab",
+  "@highsturology",
+  "하이스트 비뇨의학과",
+  "남성체형연구소",
+];
 const CLINIC_DEFAULTS_VERSION = "2026-05-07-stem-cell-ed-injection";
 const DEFAULT_CHANNELS = [
   {
@@ -65,7 +71,7 @@ const copyPromptButton = document.querySelector("#copyPromptButton");
 const filterButtons = [...document.querySelectorAll(".filterButton")];
 
 let comments = [];
-let activeFilter = "all";
+let activeFilter = "needsReply";
 let accessToken = "";
 let clinicGuidelines = [];
 let clinicStrengths = [];
@@ -1160,9 +1166,9 @@ function renderReplies(container, replies) {
 
 function getActiveFilteredComments() {
   return comments.filter((comment) => {
-    if (activeFilter === "unreplied") return comment.replyCount === 0;
-    if (activeFilter === "liked") return comment.likeCount > 0;
-    return true;
+    const ownerReplied = hasOwnerReply(comment);
+    if (activeFilter === "replied") return ownerReplied;
+    return !ownerReplied;
   });
 }
 
@@ -1172,9 +1178,18 @@ function getPromptCandidateComments(sourceComments) {
 }
 
 function hasOwnerReply(comment) {
-  return (comment.replies || []).some((reply) =>
-    normalizeHandle(reply.author).includes(normalizeHandle(OWNER_REPLY_HANDLE)),
-  );
+  return (comment.replies || []).some((reply) => isOwnerReplyAuthor(reply.author));
+}
+
+function isOwnerReplyAuthor(author) {
+  const normalizedAuthor = normalizeHandle(author);
+  return OWNER_REPLY_HANDLES.some((handle) => {
+    const normalizedHandle = normalizeHandle(handle);
+    return (
+      normalizedAuthor.includes(normalizedHandle) ||
+      normalizedHandle.includes(normalizedAuthor)
+    );
+  });
 }
 
 function normalizeHandle(value) {
@@ -1219,7 +1234,7 @@ function buildAiReplyPrompt(sourceComments, options = {}) {
     "기본 원칙:",
     "1. 영상 제목은 답글 대상에서 제외해.",
     "2. “답글”, “답글 0개”, “답글 1개”, “자세히 알아보기” 같은 UI 문구는 제외해.",
-    `3. 이미 ${OWNER_REPLY_HANDLE} 계정으로 답글이 달린 댓글은 제외해. 아래 목록은 1차 제외 후 복사했지만, 내용상 이미 답변된 댓글도 제외해.`,
+    `3. 이미 병원 운영 계정(${OWNER_REPLY_HANDLES.join(", ")})으로 답글이 달린 댓글은 제외해. 아래 목록은 1차 제외 후 복사했지만, 내용상 이미 답변된 댓글도 제외해.`,
     "4. 댓글 작성자 아이디와 작성 시간은 제외하고, 실제 댓글 내용만 보고 답글해.",
     "5. 답글은 한 댓글당 1개씩만 작성해.",
     "6. 각 답변 위에는 어떤 댓글에 대한 답변인지 알 수 있게, 원댓글 내용을 일반 텍스트로 먼저 표시해.",
