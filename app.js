@@ -198,8 +198,8 @@ copyPromptButton.addEventListener("click", async () => {
   try {
     const prompt = buildAiReplyPrompt();
     await copyText(prompt);
-    const count = getPromptCandidateComments().length;
-    setStatus("복사 완료", `AI 답글 프롬프트에 댓글 후보 ${count}개를 담았습니다.`);
+    const count = getPromptCandidateComments(getActiveFilteredComments()).length;
+    setStatus("복사 완료", `전체 채널 AI 답글 프롬프트에 댓글 후보 ${count}개를 담았습니다.`);
   } catch (error) {
     setStatus("복사 실패", error.message || "클립보드 복사에 실패했습니다.");
   }
@@ -866,6 +866,7 @@ function renderComments() {
   });
 
   results.append(fragment);
+  refreshIcons();
 }
 
 function groupCommentsByChannel(commentList) {
@@ -902,11 +903,15 @@ function renderChannelColumn(channel) {
 
   const header = document.createElement("header");
   header.className = "channelColumnHeader";
+  const titleBlock = document.createElement("div");
+  titleBlock.className = "channelTitleBlock";
   const title = document.createElement("h2");
   title.textContent = channel.name;
   const count = document.createElement("p");
-  count.textContent = `댓글 ${channel.comments.length}개`;
-  header.append(title, count);
+  const candidateCount = getPromptCandidateComments(channel.comments).length;
+  count.textContent = `댓글 ${channel.comments.length}개 · AI 후보 ${candidateCount}개`;
+  titleBlock.append(title, count);
+  header.append(titleBlock, renderChannelActions(channel));
 
   const body = document.createElement("div");
   body.className = "channelColumnBody";
@@ -925,6 +930,46 @@ function renderChannelColumn(channel) {
 
   column.append(header, body);
   return column;
+}
+
+function renderChannelActions(channel) {
+  const actions = document.createElement("div");
+  actions.className = "channelActions";
+
+  const copyButton = document.createElement("button");
+  copyButton.type = "button";
+  copyButton.className = "channelAction";
+  copyButton.title = `${channel.name} 프롬프트 복사`;
+  copyButton.innerHTML = `<i data-lucide="copy"></i><span>복사</span>`;
+  copyButton.addEventListener("click", async () => {
+    try {
+      const prompt = buildAiReplyPrompt(channel.comments, { scopeLabel: channel.name });
+      await copyText(prompt);
+      const count = getPromptCandidateComments(channel.comments).length;
+      setStatus("채널 프롬프트 복사 완료", `${channel.name} 댓글 후보 ${count}개를 프롬프트와 함께 복사했습니다.`);
+    } catch (error) {
+      setStatus("복사 실패", error.message || `${channel.name}에서 복사할 댓글 후보가 없습니다.`);
+    }
+  });
+
+  actions.append(
+    copyButton,
+    createAiLink("GPT", "message-square-text", "https://chatgpt.com/", "ChatGPT 열기"),
+    createAiLink("Gemini", "sparkles", "https://gemini.google.com/app", "Gemini 열기"),
+  );
+
+  return actions;
+}
+
+function createAiLink(label, icon, href, title) {
+  const link = document.createElement("a");
+  link.className = "channelAction";
+  link.href = href;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.title = title;
+  link.innerHTML = `<i data-lucide="${icon}"></i><span>${label}</span>`;
+  return link;
 }
 
 function renderVideoGroup(group) {
@@ -1149,8 +1194,9 @@ function getActiveFilteredComments() {
   });
 }
 
-function getPromptCandidateComments() {
-  return getActiveFilteredComments().filter((comment) => !hasOwnerReply(comment));
+function getPromptCandidateComments(sourceComments) {
+  const source = Array.isArray(sourceComments) ? sourceComments : getActiveFilteredComments();
+  return source.filter((comment) => !hasOwnerReply(comment));
 }
 
 function hasOwnerReply(comment) {
@@ -1163,8 +1209,8 @@ function normalizeHandle(value) {
   return String(value || "").replace(/\s+/g, "").toLowerCase();
 }
 
-function buildAiReplyPrompt() {
-  const candidates = getPromptCandidateComments();
+function buildAiReplyPrompt(sourceComments, options = {}) {
+  const candidates = getPromptCandidateComments(sourceComments);
   if (!candidates.length) {
     throw new Error("복사할 댓글 후보가 없습니다.");
   }
@@ -1182,6 +1228,7 @@ function buildAiReplyPrompt() {
     .map((comment, index) => {
       return [
         `${index + 1}.`,
+        `채널명(참고용): ${comment.channelName}`,
         `영상 제목(참고용): ${comment.videoTitle}`,
         `원댓글: ${comment.text}`,
       ].join("\n");
@@ -1189,7 +1236,9 @@ function buildAiReplyPrompt() {
     .join("\n\n");
 
   return [
-    "아래는 유튜브 댓글관리 도구에서 정리한 댓글 후보 목록이야.",
+    options.scopeLabel
+      ? `아래는 유튜브 댓글관리 도구에서 ${options.scopeLabel} 채널만 분리해 정리한 댓글 후보 목록이야.`
+      : "아래는 유튜브 댓글관리 도구에서 정리한 댓글 후보 목록이야.",
     "",
     "영상 제목은 참고용이고, 답글 대상은 “원댓글” 내용이야.",
     "",
