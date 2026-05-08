@@ -21,7 +21,7 @@ const DEFAULT_CHANNELS = [
     id: "https://www.youtube.com/@논현동구원장",
   },
   {
-    name: "Mens BodyLab",
+    name: "남성체형연구소",
     id: "https://www.youtube.com/@Mens_BodyLab",
   },
 ];
