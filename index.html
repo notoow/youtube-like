@@ -20,7 +20,18 @@
         <form id="settingsForm" class="settings">
           <label>
             <span>연결 키</span>
-            <input id="apiKey" type="password" autocomplete="off" placeholder="AIza..." />
+            <div class="fieldWithButton">
+              <input id="apiKey" type="password" autocomplete="off" placeholder="AIza..." />
+              <button
+                id="copyApiKeyButton"
+                class="iconButton fieldCopyButton"
+                type="button"
+                title="연결 키 복사"
+                aria-label="연결 키 복사"
+              >
+                <i data-lucide="copy"></i>
+              </button>
+            </div>
           </label>
           <label>
             <span>영상 범위</span>

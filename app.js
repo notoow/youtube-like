@@ -48,6 +48,7 @@ const DEFAULT_CLINIC_STRENGTHS = [
 
 const form = document.querySelector("#settingsForm");
 const apiKeyInput = document.querySelector("#apiKey");
+const copyApiKeyButton = document.querySelector("#copyApiKeyButton");
 const clientIdInput = document.querySelector("#clientId");
 const channelIdInput = document.querySelector("#channelId");
 const channelNameInputs = [...document.querySelectorAll(".channelNameInput")];
@@ -91,6 +92,21 @@ authButton.addEventListener("click", async () => {
     setStatus("Google 연결됨", "이제 댓글 카드에서 답글을 작성할 수 있습니다.");
   } catch (error) {
     setStatus("연결 실패", error.message || "Google OAuth 연결에 실패했습니다.");
+  }
+});
+
+copyApiKeyButton.addEventListener("click", async () => {
+  const apiKey = apiKeyInput.value.trim();
+  if (!apiKey) {
+    setStatus("복사할 키 없음", "연결 키를 먼저 입력해주세요.");
+    return;
+  }
+
+  try {
+    await copyText(apiKey);
+    setStatus("연결 키 복사 완료", "현재 입력된 연결 키를 클립보드에 복사했습니다.");
+  } catch (error) {
+    setStatus("복사 실패", error.message || "연결 키를 복사하지 못했습니다.");
   }
 });
 

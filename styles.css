@@ -118,6 +118,18 @@ select:focus {
   outline: 3px solid var(--focus);
 }
 
+.fieldWithButton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+}
+
+.fieldWithButton .iconButton {
+  width: 42px;
+  min-height: 42px;
+  background: #fff;
+}
+
 button,
 .actions a {
   display: inline-flex;
