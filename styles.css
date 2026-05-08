@@ -516,8 +516,8 @@ button:hover,
 }
 
 .channelColumnBody {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   min-height: 0;
   padding: 10px;
@@ -536,6 +536,7 @@ button:hover,
 }
 
 .videoGroup {
+  flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -654,14 +655,11 @@ button:hover,
 }
 
 .commentText {
-  display: -webkit-box;
-  min-height: 58px;
   margin: 0;
-  overflow: hidden;
   color: #343941;
-  line-height: 1.5;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  line-height: 1.48;
 }
 
 .replyForm {
@@ -716,7 +714,7 @@ button:hover,
 
 .replyText {
   width: 100%;
-  min-height: 58px;
+  min-height: 42px;
   resize: vertical;
   border: 1px solid var(--line);
   border-radius: 6px;
