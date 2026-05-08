@@ -35,27 +35,26 @@ select {
 
 .shell {
   display: grid;
-  grid-template-rows: auto auto auto auto 1fr;
-  width: min(1720px, calc(100% - 32px));
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  width: min(1880px, calc(100% - 24px));
   height: 100vh;
   margin: 0 auto;
-  padding: 16px 0;
+  padding: 10px 0;
   overflow: hidden;
 }
 
 .toolbar {
-  position: sticky;
-  top: 16px;
+  position: relative;
   z-index: 5;
   display: grid;
-  grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.28fr);
-  gap: 28px;
-  align-items: end;
-  padding: 24px;
+  grid-template-columns: minmax(250px, 0.58fr) minmax(680px, 1.42fr);
+  gap: 20px;
+  align-items: center;
+  padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
-  box-shadow: 0 1px 2px rgb(31 35 40 / 4%);
+  box-shadow: 0 12px 32px rgb(31 35 40 / 6%);
 }
 
 .headingBlock {
@@ -63,9 +62,9 @@ select {
 }
 
 .eyebrow {
-  margin: 0 0 8px;
+  margin: 0 0 5px;
   color: var(--accent);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -73,38 +72,38 @@ select {
 
 h1 {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3.15rem);
+  font-size: clamp(1.45rem, 2.4vw, 2.25rem);
   line-height: 1.05;
   letter-spacing: 0;
 }
 
 .summary {
   max-width: 460px;
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   color: var(--muted);
-  font-size: 0.98rem;
+  font-size: 0.88rem;
   line-height: 1.5;
 }
 
 .settings {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 136px;
-  gap: 12px;
+  grid-template-columns: minmax(320px, 1fr) 118px;
+  gap: 8px 10px;
   align-items: end;
 }
 
 label {
   display: grid;
-  gap: 7px;
+  gap: 5px;
   color: #4d5560;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 700;
 }
 
 input,
 select {
   width: 100%;
-  height: 42px;
+  height: 38px;
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 0 12px;
@@ -120,20 +119,20 @@ select:focus {
 
 .fieldWithButton {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
+  grid-template-columns: minmax(0, 1fr) 38px;
   gap: 8px;
 }
 
 .fieldWithButton .iconButton {
-  width: 42px;
-  min-height: 42px;
+  width: 38px;
+  min-height: 38px;
   background: #fff;
 }
 
 button,
 .actions a {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 38px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
@@ -154,14 +153,14 @@ button:disabled {
 .formActions {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: 150px 1fr;
+  grid-template-columns: 132px 1fr;
   gap: 10px;
 }
 
 .advancedSettings {
   grid-column: 1 / -1;
   border-top: 1px solid var(--line);
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .advancedSettings summary {
@@ -174,8 +173,8 @@ button:disabled {
 .advancedGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .channelSettings {
@@ -193,7 +192,7 @@ button:disabled {
 .channelConfigGrid {
   display: grid;
   grid-template-columns: minmax(140px, 0.7fr) minmax(240px, 1.3fr);
-  gap: 10px 12px;
+  gap: 8px 10px;
 }
 
 #loadButton {
@@ -212,16 +211,14 @@ button:hover,
 }
 
 .statusRow {
-  position: sticky;
-  top: 0;
   z-index: 4;
   display: flex;
-  min-height: 64px;
+  min-height: 48px;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 14px 18px;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -233,51 +230,85 @@ button:hover,
 }
 
 .statusRow span {
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
 }
 
 .filters {
-  position: sticky;
-  top: 0;
   z-index: 4;
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-top: 14px;
+  margin-top: 8px;
 }
 
 .aiPanel {
-  position: sticky;
-  top: 0;
   z-index: 3;
-  display: grid;
-  grid-template-columns: minmax(220px, 0.62fr) repeat(2, minmax(260px, 1fr)) 160px;
-  gap: 14px;
-  align-items: start;
-  margin-top: 14px;
-  padding: 16px;
+  margin-top: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
+  overflow: hidden;
 }
 
-.aiPanel h2 {
-  margin: 0;
-  font-size: 1rem;
+.aiPanel summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.aiPanel summary::-webkit-details-marker {
+  display: none;
+}
+
+.aiPanel summary strong,
+.aiPanel summary small {
+  display: block;
+}
+
+.aiPanel summary strong {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.aiPanel summary small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
   line-height: 1.35;
 }
 
-.aiPanel p {
-  margin: 5px 0 0;
+.aiPanel summary svg {
+  width: 18px;
+  height: 18px;
   color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.45;
+  transition: transform 160ms ease;
+}
+
+.aiPanel[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.aiPanel[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.aiPanelBody {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr)) 156px;
+  gap: 14px;
+  align-items: end;
+  padding: 14px;
 }
 
 #copyPromptButton {
-  min-height: 42px;
+  min-height: 38px;
   align-self: end;
 }
 
@@ -309,7 +340,7 @@ button:hover,
 .ruleList {
   display: grid;
   gap: 8px;
-  max-height: 240px;
+  max-height: 170px;
   overflow: auto;
   padding-right: 2px;
 }
@@ -375,8 +406,8 @@ button:hover,
 }
 
 .filterButton {
-  min-height: 38px;
-  padding: 0 16px;
+  min-height: 34px;
+  padding: 0 14px;
 }
 
 .filterButton.active {
@@ -390,7 +421,7 @@ button:hover,
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   min-height: 0;
-  margin-top: 14px;
+  margin-top: 8px;
   overflow: hidden;
 }
 
@@ -401,14 +432,19 @@ button:hover,
   min-height: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgb(255 255 255 / 70%);
+  background: #fff;
+  box-shadow: 0 14px 36px rgb(31 35 40 / 5%);
   overflow: hidden;
 }
 
 .channelColumnHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
-  background: #fff;
+  background: rgb(255 255 255 / 96%);
+  backdrop-filter: blur(10px);
 }
 
 .channelColumnHeader h2 {
@@ -426,10 +462,11 @@ button:hover,
 .channelColumnBody {
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px;
+  padding: 10px;
+  scrollbar-gutter: stable;
 }
 
 .channelEmpty {
@@ -444,7 +481,7 @@ button:hover,
 .videoGroup {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgb(255 255 255 / 70%);
+  background: #fff;
   overflow: hidden;
 }
 
@@ -452,22 +489,22 @@ button:hover,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--line);
-  background: #fff;
+  background: var(--field);
 }
 
 .videoGroupMedia {
   display: grid;
-  grid-template-columns: 104px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 10px;
   min-width: 0;
   align-items: center;
 }
 
 .videoThumb {
-  width: 104px;
+  width: 84px;
   aspect-ratio: 16 / 9;
   border-radius: 6px;
   object-fit: cover;
@@ -480,19 +517,19 @@ button:hover,
 
 .videoGroupHeader h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.88rem;
   line-height: 1.35;
 }
 
 .videoGroupHeader p {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.76rem;
 }
 
 .videoGroupHeader a {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 30px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
@@ -513,17 +550,17 @@ button:hover,
 .videoComments {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
-  padding: 14px;
+  gap: 10px;
+  padding: 10px;
 }
 
 .commentCard {
   display: grid;
-  gap: 14px;
-  min-height: 248px;
+  gap: 11px;
+  min-height: 236px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px;
   background: var(--panel);
 }
 
@@ -540,16 +577,16 @@ button:hover,
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   border-radius: 50%;
   background: #eef1f4;
 }
 
 .author {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 0.9rem;
   line-height: 1.25;
 }
 
@@ -562,7 +599,7 @@ button:hover,
 
 .commentText {
   display: -webkit-box;
-  min-height: 72px;
+  min-height: 58px;
   margin: 0;
   overflow: hidden;
   color: #343941;
@@ -623,7 +660,7 @@ button:hover,
 
 .replyText {
   width: 100%;
-  min-height: 68px;
+  min-height: 76px;
   resize: vertical;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -632,6 +669,12 @@ button:hover,
   background: var(--field);
   font: inherit;
   line-height: 1.45;
+}
+
+.replyText.ghostDraft {
+  border-style: dashed;
+  color: #8a949f;
+  background: #fbfcfd;
 }
 
 .replyText:focus {
@@ -689,7 +732,7 @@ button:hover,
   .formActions,
   .advancedGrid,
   .channelConfigGrid,
-  .aiPanel,
+  .aiPanelBody,
   .results,
   .videoComments {
     grid-template-columns: 1fr;
