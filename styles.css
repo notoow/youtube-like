@@ -502,6 +502,12 @@ button:hover,
   stroke-width: 2.3;
 }
 
+.channelAction img {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
 .channelColumnBody {
   display: grid;
   align-content: start;

@@ -995,21 +995,24 @@ function renderChannelActions(channel) {
 
   actions.append(
     copyButton,
-    createAiLink("GPT", "message-square-text", "https://chatgpt.com/", "ChatGPT 열기"),
-    createAiLink("Gemini", "sparkles", "https://gemini.google.com/app", "Gemini 열기"),
+    createAiLink("GPT", "chatgpt.com", "https://chatgpt.com/", "ChatGPT 새 탭에서 열기"),
+    createAiLink("Gemini", "gemini.google.com", "https://gemini.google.com/app", "Gemini 새 탭에서 열기"),
   );
 
   return actions;
 }
 
-function createAiLink(label, icon, href, title) {
+function createAiLink(label, faviconDomain, href, title) {
   const link = document.createElement("a");
   link.className = "channelAction";
   link.href = href;
   link.target = "_blank";
-  link.rel = "noreferrer";
+  link.rel = "noopener noreferrer";
   link.title = title;
-  link.innerHTML = `<i data-lucide="${icon}"></i><span>${label}</span>`;
+  link.innerHTML = [
+    `<img src="https://www.google.com/s2/favicons?domain=${faviconDomain}&sz=64" alt="" />`,
+    `<span>${label}</span>`,
+  ].join("");
   return link;
 }
 
