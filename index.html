@@ -4,12 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YouTube Comment Heart Helper</title>
-    <link rel="stylesheet" href="styles.css?v=20260508-column-scroll-v3" />
+    <link rel="stylesheet" href="styles.css?v=20260518-instagram-inbox" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
   </head>
   <body>
     <main class="shell">
+      <nav class="modeTabs" aria-label="작업 도구 선택">
+        <button class="modeTab active" type="button" data-mode="youtube">
+          <i data-lucide="youtube"></i>
+          <span>YouTube 댓글</span>
+        </button>
+        <button class="modeTab" type="button" data-mode="instagram">
+          <i data-lucide="instagram"></i>
+          <span>Instagram 인박스</span>
+        </button>
+        <span class="modeHint">같은 앱 안에서 채널별 작업판만 전환합니다.</span>
+      </nav>
       <section class="toolbar" aria-label="댓글 불러오기 설정">
         <div class="headingBlock">
           <p class="eyebrow">YouTube Studio Helper</p>
@@ -172,6 +183,231 @@
       </details>
 
       <section id="results" class="results" aria-label="댓글 목록"></section>
+
+      <section id="instagramInbox" class="instagramInbox" aria-label="Instagram 댓글 인박스" hidden>
+        <header class="instagramTopbar">
+          <div>
+            <p class="eyebrow">Instagram Comment Inbox</p>
+            <h1>논현동구원장 댓글 인박스</h1>
+            <p class="summary">영상은 많아도 최근 반응과 답글 필요 댓글만 먼저 보이게 정리합니다.</p>
+          </div>
+          <div class="instagramConnect">
+            <label>
+              <span>계정</span>
+              <input type="text" value="@nonhyeon_dr_koo" readonly />
+            </label>
+            <label>
+              <span>범위</span>
+              <select>
+                <option>최근 댓글 영상 50개</option>
+                <option>최근 댓글 영상 100개</option>
+                <option>전체 동기화</option>
+              </select>
+            </label>
+            <button type="button" id="instagramMockButton">
+              <i data-lucide="plug"></i>
+              <span>Meta 연결</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="instagramStats" aria-label="Instagram 요약">
+          <article>
+            <strong>184</strong>
+            <span>답글 필요</span>
+          </article>
+          <article>
+            <strong>36</strong>
+            <span>질문성 댓글</span>
+          </article>
+          <article>
+            <strong>18</strong>
+            <span>가격/상담 문의</span>
+          </article>
+          <article>
+            <strong>9</strong>
+            <span>주의 댓글</span>
+          </article>
+        </section>
+
+        <section class="instagramBoard">
+          <aside class="igMediaRail" aria-label="댓글 많은 영상">
+            <div class="igPanelHeader">
+              <div>
+                <h2>영상 우선순위</h2>
+                <p>최근 댓글순 · 답글 필요순</p>
+              </div>
+              <button type="button" title="새로고침" aria-label="새로고침">
+                <i data-lucide="refresh-cw"></i>
+              </button>
+            </div>
+            <div class="igMediaList">
+              <article class="igMediaItem active">
+                <div class="igThumb"></div>
+                <div>
+                  <h3>수면마취 잘 안되는 사람 특징</h3>
+                  <p>댓글 37개 · 답글 필요 14개</p>
+                </div>
+              </article>
+              <article class="igMediaItem">
+                <div class="igThumb warm"></div>
+                <div>
+                  <h3>확대수술 후 회복 과정</h3>
+                  <p>댓글 29개 · 답글 필요 11개</p>
+                </div>
+              </article>
+              <article class="igMediaItem">
+                <div class="igThumb green"></div>
+                <div>
+                  <h3>발기부전 치료 옵션 정리</h3>
+                  <p>댓글 24개 · 답글 필요 9개</p>
+                </div>
+              </article>
+              <article class="igMediaItem">
+                <div class="igThumb dark"></div>
+                <div>
+                  <h3>남성수술 상담 전 확인할 점</h3>
+                  <p>댓글 18개 · 답글 필요 7개</p>
+                </div>
+              </article>
+              <article class="igMediaItem">
+                <div class="igThumb blue"></div>
+                <div>
+                  <h3>여유증 수술 Q&amp;A</h3>
+                  <p>댓글 16개 · 답글 필요 5개</p>
+                </div>
+              </article>
+            </div>
+          </aside>
+
+          <section class="igCommentPanel" aria-label="Instagram 댓글 처리">
+            <div class="igPanelHeader">
+              <div>
+                <h2>답글 필요한 댓글</h2>
+                <p>영상 제목은 참고용, 댓글만 처리 대상으로 봅니다.</p>
+              </div>
+              <div class="igFilterSet">
+                <button class="active" type="button">전체</button>
+                <button type="button">질문</button>
+                <button type="button">가격</button>
+                <button type="button">주의</button>
+              </div>
+            </div>
+
+            <div class="igCommentList">
+              <article class="igCommentCard">
+                <header>
+                  <div class="avatar"></div>
+                  <div>
+                    <h3>@lager6591</h3>
+                    <p>2시간 전 · 질문성</p>
+                  </div>
+                </header>
+                <p>남자 여유증이랑 함몰유두도 동시에 수술이 가능한가요?</p>
+                <textarea rows="3" placeholder="답글 초안 작성"></textarea>
+                <footer>
+                  <span>답글 없음</span>
+                  <div>
+                    <button type="button">AI 복사용</button>
+                    <button type="button">답글 달기</button>
+                  </div>
+                </footer>
+              </article>
+
+              <article class="igCommentCard">
+                <header>
+                  <div class="avatar coral"></div>
+                  <div>
+                    <h3>@body_qna</h3>
+                    <p>5시간 전 · 가격 문의</p>
+                  </div>
+                </header>
+                <p>확대수술 비용은 재료마다 차이가 큰가요? 상담 전에 대략 알고 싶어요.</p>
+                <textarea rows="3" placeholder="답글 초안 작성"></textarea>
+                <footer>
+                  <span>답글 없음</span>
+                  <div>
+                    <button type="button">AI 복사용</button>
+                    <button type="button">답글 달기</button>
+                  </div>
+                </footer>
+              </article>
+
+              <article class="igCommentCard warning">
+                <header>
+                  <div class="avatar dark"></div>
+                  <div>
+                    <h3>@fast_growth</h3>
+                    <p>어제 · 광고/검증 필요</p>
+                  </div>
+                </header>
+                <p>이 제품 먹으면 수술 없이 무조건 커진다던데 병원에서도 추천하나요?</p>
+                <textarea rows="3" placeholder="답글 초안 작성"></textarea>
+                <footer>
+                  <span>주의 필요</span>
+                  <div>
+                    <button type="button">AI 복사용</button>
+                    <button type="button">답글 달기</button>
+                  </div>
+                </footer>
+              </article>
+
+              <article class="igCommentCard">
+                <header>
+                  <div class="avatar green"></div>
+                  <div>
+                    <h3>@real_review_82</h3>
+                    <p>어제 · 단순 반응</p>
+                  </div>
+                </header>
+                <p>설명 깔끔하네요. 궁금했던 내용이 풀렸습니다.</p>
+                <textarea rows="3" placeholder="하트만 누를 댓글이면 비워둬도 됩니다."></textarea>
+                <footer>
+                  <span>하트 후보</span>
+                  <div>
+                    <button type="button">하트</button>
+                    <button type="button">완료</button>
+                  </div>
+                </footer>
+              </article>
+            </div>
+          </section>
+
+          <aside class="igAiPanel" aria-label="AI 답글 작업">
+            <div class="igPanelHeader">
+              <div>
+                <h2>AI 작업함</h2>
+                <p>채널별 프롬프트 복사 방식 유지</p>
+              </div>
+            </div>
+            <div class="igPromptBox">
+              <h3>복사 대상</h3>
+              <p>현재 선택한 영상의 답글 필요 댓글 14개</p>
+              <button type="button">
+                <i data-lucide="copy"></i>
+                <span>프롬프트 복사</span>
+              </button>
+              <div class="igAiLinks">
+                <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">
+                  <img src="https://www.google.com/s2/favicons?domain=chatgpt.com&amp;sz=64" alt="" />
+                  GPT
+                </a>
+                <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer">
+                  <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&amp;sz=64" alt="" />
+                  Gemini
+                </a>
+              </div>
+            </div>
+            <div class="igQueue">
+              <h3>처리 흐름</h3>
+              <p><strong>1</strong> 영상별 댓글 수집</p>
+              <p><strong>2</strong> 이미 답글 단 댓글 제외</p>
+              <p><strong>3</strong> 질문성/가격/주의 댓글 분류</p>
+              <p><strong>4</strong> AI 답글 복사 또는 직접 답글</p>
+            </div>
+          </aside>
+        </section>
+      </section>
     </main>
 
     <template id="commentTemplate">
@@ -199,6 +435,6 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260508-column-scroll-v3"></script>
+    <script src="app.js?v=20260518-instagram-inbox"></script>
   </body>
 </html>

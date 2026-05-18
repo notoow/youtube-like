@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   clinicGuidelines: "yt-heart-helper-clinic-guidelines",
   clinicStrengths: "yt-heart-helper-clinic-strengths",
   clinicDefaultsVersion: "yt-heart-helper-clinic-defaults-version",
+  viewMode: "yt-heart-helper-view-mode",
 };
 
 const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
@@ -52,6 +53,9 @@ const DEFAULT_CLINIC_STRENGTHS = [
   "발기부전 치료 옵션을 약물치료와 주사치료 등으로 넓혀 환자 상태에 맞춰 상담한다.",
 ];
 
+const shell = document.querySelector(".shell");
+const modeButtons = [...document.querySelectorAll(".modeTab")];
+const instagramInbox = document.querySelector("#instagramInbox");
 const form = document.querySelector("#settingsForm");
 const apiKeyInput = document.querySelector("#apiKey");
 const copyApiKeyButton = document.querySelector("#copyApiKeyButton");
@@ -72,6 +76,7 @@ const filterButtons = [...document.querySelectorAll(".filterButton")];
 
 let comments = [];
 let activeFilter = "needsReply";
+let activeMode = "youtube";
 let accessToken = "";
 let clinicGuidelines = [];
 let clinicStrengths = [];
@@ -89,7 +94,38 @@ function init() {
   clinicGuidelines = readRuleList(STORAGE_KEYS.clinicGuidelines, DEFAULT_CLINIC_GUIDELINES);
   clinicStrengths = readRuleList(STORAGE_KEYS.clinicStrengths, DEFAULT_CLINIC_STRENGTHS);
   renderAllRuleLists();
+  const requestedMode =
+    window.location.hash === "#instagram"
+      ? "instagram"
+      : localStorage.getItem(STORAGE_KEYS.viewMode) === "instagram"
+        ? "instagram"
+        : "youtube";
+  setMode(requestedMode);
   renderEmpty("아직 불러온 댓글이 없습니다.");
+}
+
+modeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setMode(button.dataset.mode === "instagram" ? "instagram" : "youtube");
+  });
+});
+
+function setMode(mode) {
+  activeMode = mode;
+  localStorage.setItem(STORAGE_KEYS.viewMode, mode);
+  if (mode === "instagram" && window.location.hash !== "#instagram") {
+    history.replaceState(null, "", "#instagram");
+  } else if (mode === "youtube" && window.location.hash === "#instagram") {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+  shell.classList.toggle("instagramMode", mode === "instagram");
+  instagramInbox.hidden = mode !== "instagram";
+  modeButtons.forEach((button) => {
+    const isActive = button.dataset.mode === mode;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  refreshIcons();
 }
 
 authButton.addEventListener("click", async () => {

@@ -41,13 +41,56 @@ select {
 
 .shell {
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
   width: min(1880px, calc(100% - 24px));
   height: 100dvh;
   max-height: 100dvh;
   margin: 0 auto;
   padding: 10px 0;
   overflow: hidden;
+}
+
+.shell.instagramMode {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.shell.instagramMode .toolbar,
+.shell.instagramMode .statusRow,
+.shell.instagramMode .filters,
+.shell.instagramMode .aiPanel,
+.shell.instagramMode .results {
+  display: none;
+}
+
+.modeTabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 2px;
+}
+
+.modeTab {
+  min-height: 34px;
+  gap: 7px;
+  padding: 0 13px;
+}
+
+.modeTab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.modeTab.active {
+  border-color: var(--ink);
+  color: #fff;
+  background: var(--ink);
+}
+
+.modeHint {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .toolbar {
@@ -764,6 +807,367 @@ button:hover,
   text-align: center;
 }
 
+.instagramInbox[hidden] {
+  display: none;
+}
+
+.instagramInbox {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.instagramTopbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.55fr) minmax(520px, 1.45fr);
+  gap: 18px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgb(31 35 40 / 6%);
+}
+
+.instagramConnect {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 180px 160px;
+  gap: 10px;
+  align-items: end;
+}
+
+.instagramConnect button {
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.instagramConnect svg {
+  width: 16px;
+  height: 16px;
+}
+
+.instagramStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.instagramStats article {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.instagramStats strong {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.instagramStats span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.instagramBoard {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.78fr) minmax(480px, 1.45fr) minmax(280px, 0.77fr);
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.igMediaRail,
+.igCommentPanel,
+.igAiPanel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 14px 36px rgb(31 35 40 / 5%);
+}
+
+.igPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 255 255 / 96%);
+}
+
+.igPanelHeader h2,
+.igPromptBox h3,
+.igQueue h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.3;
+}
+
+.igPanelHeader p,
+.igPromptBox p,
+.igQueue p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.igPanelHeader button {
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.igPanelHeader svg {
+  width: 15px;
+  height: 15px;
+}
+
+.igMediaList,
+.igCommentList,
+.igAiPanel {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.igMediaList,
+.igCommentList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.igMediaItem {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.igMediaItem.active {
+  border-color: var(--ink);
+  background: #fff;
+}
+
+.igMediaItem h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.igMediaItem p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.igThumb {
+  width: 84px;
+  aspect-ratio: 4 / 5;
+  border-radius: 7px;
+  background:
+    linear-gradient(135deg, rgb(31 35 40 / 72%), rgb(229 57 53 / 68%)),
+    #dfe5eb;
+}
+
+.igThumb.warm {
+  background:
+    linear-gradient(135deg, rgb(26 84 97 / 72%), rgb(231 157 59 / 70%)),
+    #dfe5eb;
+}
+
+.igThumb.green {
+  background:
+    linear-gradient(135deg, rgb(27 127 95 / 76%), rgb(61 80 120 / 70%)),
+    #dfe5eb;
+}
+
+.igThumb.dark {
+  background:
+    linear-gradient(135deg, rgb(31 35 40 / 85%), rgb(84 92 105 / 70%)),
+    #dfe5eb;
+}
+
+.igThumb.blue {
+  background:
+    linear-gradient(135deg, rgb(45 88 125 / 78%), rgb(229 57 53 / 58%)),
+    #dfe5eb;
+}
+
+.igFilterSet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.igFilterSet button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
+.igFilterSet button.active {
+  border-color: var(--ink);
+  color: #fff;
+  background: var(--ink);
+}
+
+.igCommentCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.igCommentCard.warning {
+  border-color: rgb(229 57 53 / 52%);
+}
+
+.igCommentCard header,
+.igCommentCard footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.igCommentCard header {
+  justify-content: flex-start;
+}
+
+.igCommentCard h3,
+.igCommentCard p {
+  margin: 0;
+}
+
+.igCommentCard header p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.igCommentCard > p {
+  color: #343941;
+  line-height: 1.5;
+}
+
+.igCommentCard textarea {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--field);
+  font: inherit;
+  line-height: 1.45;
+}
+
+.igCommentCard footer span {
+  color: var(--green);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.igCommentCard footer div,
+.igAiLinks {
+  display: flex;
+  gap: 8px;
+}
+
+.igCommentCard footer button,
+.igAiLinks a {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.avatar.coral {
+  background: #f06f53;
+}
+
+.avatar.dark {
+  background: #343941;
+}
+
+.avatar.green {
+  background: #1b7f5f;
+}
+
+.igAiPanel {
+  display: flex;
+  flex-direction: column;
+  align-content: start;
+  overflow-y: auto;
+}
+
+.igPromptBox,
+.igQueue {
+  display: grid;
+  gap: 10px;
+  margin: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.igPromptBox button {
+  gap: 7px;
+  min-height: 38px;
+}
+
+.igPromptBox svg {
+  width: 16px;
+  height: 16px;
+}
+
+.igAiLinks a {
+  align-items: center;
+  gap: 5px;
+}
+
+.igAiLinks img {
+  width: 14px;
+  height: 14px;
+}
+
+.igQueue strong {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--ink);
+  font-size: 0.78rem;
+}
+
 @media (max-width: 960px) {
   html {
     height: auto;
@@ -789,8 +1193,21 @@ button:hover,
   .channelConfigGrid,
   .aiPanelBody,
   .results,
-  .videoComments {
+  .videoComments,
+  .instagramTopbar,
+  .instagramConnect,
+  .instagramStats,
+  .instagramBoard {
     grid-template-columns: 1fr;
+  }
+
+  .modeTabs {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .modeHint {
+    display: none;
   }
 
   .results {
@@ -805,6 +1222,21 @@ button:hover,
 
   .channelColumnBody {
     height: auto;
+    overflow: visible;
+  }
+
+  .instagramInbox,
+  .instagramBoard,
+  .igMediaRail,
+  .igCommentPanel,
+  .igAiPanel {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .igMediaList,
+  .igCommentList {
     overflow: visible;
   }
 
