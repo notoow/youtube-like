@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YouTube Comment Heart Helper</title>
-    <link rel="stylesheet" href="styles.css?v=20260519-instagram-scope" />
+    <link rel="stylesheet" href="styles.css?v=20260519-instagram-bulk-prompt" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
   </head>
@@ -396,10 +396,16 @@
             <div class="igPromptBox">
               <h3>복사 대상</h3>
               <p>현재 선택한 영상의 답글 필요 댓글 14개</p>
-              <button type="button">
-                <i data-lucide="copy"></i>
-                <span>프롬프트 복사</span>
-              </button>
+              <div class="igPromptActions">
+                <button type="button" data-ig-prompt="selected">
+                  <i data-lucide="copy"></i>
+                  <span>선택 영상 복사</span>
+                </button>
+                <button type="button" data-ig-prompt="all">
+                  <i data-lucide="copy-check"></i>
+                  <span>전체 후보 복사</span>
+                </button>
+              </div>
               <div class="igAiLinks">
                 <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">
                   <img src="https://www.google.com/s2/favicons?domain=chatgpt.com&amp;sz=64" alt="" />
@@ -448,6 +454,6 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260519-instagram-scope"></script>
+    <script src="app.js?v=20260519-instagram-bulk-prompt"></script>
   </body>
 </html>

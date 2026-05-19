@@ -81,6 +81,8 @@ const instagramUi = {
   mediaList: document.querySelector(".igMediaList"),
   commentList: document.querySelector(".igCommentList"),
   promptBox: document.querySelector(".igPromptBox"),
+  promptSelectedButton: document.querySelector("[data-ig-prompt='selected']"),
+  promptAllButton: document.querySelector("[data-ig-prompt='all']"),
   sourcePill: document.querySelector(".igSourcePill"),
   sourceTitle: document.querySelector(".igSourceTitle"),
   sourceDetail: document.querySelector(".igSourceDetail"),
@@ -1344,19 +1346,33 @@ async function submitInstagramReply(comment, textarea, button) {
 function renderInstagramPromptBox() {
   const media = getSelectedInstagramMedia();
   if (!media || !instagramUi.promptBox) return;
-  const count = getVisibleInstagramComments(media).filter((comment) => !comment.hasOwnerReply).length;
+  const selectedComments = getVisibleInstagramComments(media);
+  const promptGroups = getInstagramPromptGroups();
+  const totalCount = countInstagramPromptComments(promptGroups);
   instagramUi.promptBox.querySelector("p").textContent =
-    `현재 선택한 영상의 답글 필요 댓글 ${count}개`;
-  const button = instagramUi.promptBox.querySelector("button");
-  button.onclick = async () => {
-    const comments = getVisibleInstagramComments(media).filter((comment) => !comment.hasOwnerReply);
-    if (!comments.length) {
-      setStatus("복사할 댓글 없음", "현재 선택한 영상에 답글 후보가 없습니다.");
-      return;
-    }
-    await copyText(buildInstagramReplyPrompt(media, comments));
-    setStatus("Instagram 프롬프트 복사", `${media.title} 댓글 ${comments.length}개를 복사했습니다.`);
-  };
+    `선택 영상 ${selectedComments.length}개 · 전체 후보 ${totalCount}개`;
+
+  if (instagramUi.promptSelectedButton) {
+    instagramUi.promptSelectedButton.onclick = async () => {
+      if (!selectedComments.length) {
+        setStatus("복사할 댓글 없음", "현재 선택한 영상에 답글 후보가 없습니다.");
+        return;
+      }
+      await copyText(buildInstagramReplyPrompt(media, selectedComments));
+      setStatus("Instagram 프롬프트 복사", `${media.title} 댓글 ${selectedComments.length}개를 복사했습니다.`);
+    };
+  }
+
+  if (instagramUi.promptAllButton) {
+    instagramUi.promptAllButton.onclick = async () => {
+      if (!totalCount) {
+        setStatus("복사할 댓글 없음", "현재 필터 조건에 맞는 전체 답글 후보가 없습니다.");
+        return;
+      }
+      await copyText(buildInstagramReplyPromptGroups(promptGroups));
+      setStatus("Instagram 전체 프롬프트 복사", `불러온 영상 전체에서 댓글 후보 ${totalCount}개를 복사했습니다.`);
+    };
+  }
 }
 
 function getSelectedInstagramMedia() {
@@ -1373,13 +1389,34 @@ function getVisibleInstagramComments(media) {
   });
 }
 
+function getInstagramPromptGroups() {
+  return (instagramData?.media || [])
+    .map((media) => ({
+      media,
+      comments: getVisibleInstagramComments(media),
+    }))
+    .filter((group) => group.comments.length);
+}
+
+function countInstagramPromptComments(groups) {
+  return groups.reduce((sum, group) => sum + group.comments.length, 0);
+}
+
 function buildInstagramReplyPrompt(media, targetComments) {
-  const lines = targetComments.map((comment, index) => {
-    return [
-      `${index + 1}.`,
-      `영상 제목(참고용): ${media.title}`,
-      `원댓글: ${comment.text}`,
-    ].join("\n");
+  return buildInstagramReplyPromptGroups([{ media, comments: targetComments }]);
+}
+
+function buildInstagramReplyPromptGroups(groups) {
+  let number = 0;
+  const lines = groups.flatMap((group) => {
+    return group.comments.map((comment) => {
+      number += 1;
+      return [
+        `${number}.`,
+        `영상 제목(참고용): ${group.media.title}`,
+        `원댓글: ${comment.text}`,
+      ].join("\n");
+    });
   });
 
   return [
