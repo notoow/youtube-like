@@ -78,6 +78,10 @@ const instagramUi = {
   mediaList: document.querySelector(".igMediaList"),
   commentList: document.querySelector(".igCommentList"),
   promptBox: document.querySelector(".igPromptBox"),
+  sourcePill: document.querySelector(".igSourcePill"),
+  sourceTitle: document.querySelector(".igSourceTitle"),
+  sourceDetail: document.querySelector(".igSourceDetail"),
+  setupItems: [...document.querySelectorAll(".igSetupItem")],
   stats: [...document.querySelectorAll(".instagramStats article")],
   filters: [...document.querySelectorAll(".igFilterSet button")],
 };
@@ -1113,10 +1117,42 @@ function addClientInstagramStats(inbox) {
 
 function renderInstagramInbox() {
   if (!instagramData?.media?.length) return;
+  renderInstagramSourceStatus();
   renderInstagramStats();
   renderInstagramMediaList();
   renderInstagramComments();
   renderInstagramPromptBox();
+}
+
+function renderInstagramSourceStatus() {
+  const source = instagramData?.source || "client-sample";
+  const isMeta = source === "meta";
+  const isServerSample = source === "sample";
+  const accountName = instagramData?.account?.username || "nonhyeon_dr_koo";
+
+  instagramUi.sourcePill.textContent = isMeta ? "Meta 실데이터" : "샘플 데이터";
+  instagramUi.sourcePill.classList.toggle("ready", isMeta);
+  instagramUi.sourcePill.classList.toggle("sample", !isMeta);
+  instagramUi.sourceTitle.textContent = isMeta
+    ? `@${accountName} 연결됨`
+    : isServerSample
+      ? "Vercel API 연결됨 · Meta 환경변수 대기"
+      : "정적 페이지 샘플 모드";
+  instagramUi.sourceDetail.textContent = isMeta
+    ? "Vercel API가 Meta Graph API에서 실제 영상과 댓글을 불러오고 있습니다."
+    : isServerSample
+      ? "Vercel 함수는 동작 중입니다. Meta 토큰과 Instagram 비즈니스 계정 ID를 넣으면 실데이터로 전환됩니다."
+      : "GitHub Pages처럼 API가 없는 환경입니다. 같은 화면 흐름을 샘플 데이터로 먼저 확인합니다.";
+
+  instagramUi.setupItems.forEach((item) => {
+    item.classList.toggle("ready", isMeta);
+    const prefix = isMeta ? "완료" : "필요";
+    item.textContent = `${prefix}: ${item.dataset.key === "token"
+      ? "META_ACCESS_TOKEN"
+      : item.dataset.key === "account"
+        ? "INSTAGRAM_BUSINESS_ACCOUNT_ID"
+        : "INSTAGRAM_OWNER_USERNAME"}`;
+  });
 }
 
 function renderInstagramStats() {

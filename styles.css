@@ -813,7 +813,7 @@ button:hover,
 
 .instagramInbox {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 8px;
   min-height: 0;
   margin-top: 4px;
@@ -847,6 +847,81 @@ button:hover,
 .instagramConnect svg {
   width: 16px;
   height: 16px;
+}
+
+.instagramSourceBar {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.igSourcePill {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  margin-right: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 9px;
+  color: var(--muted);
+  background: var(--field);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.igSourcePill.ready {
+  border-color: rgb(27 127 95 / 28%);
+  color: var(--green);
+  background: rgb(27 127 95 / 8%);
+}
+
+.igSourcePill.sample {
+  border-color: rgb(229 57 53 / 22%);
+  color: var(--accent-dark);
+  background: rgb(229 57 53 / 8%);
+}
+
+.igSourceTitle {
+  font-size: 0.9rem;
+}
+
+.igSourceDetail {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.igSetupChecklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.igSetupItem {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: var(--field);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.igSetupItem.ready {
+  border-style: solid;
+  border-color: rgb(27 127 95 / 30%);
+  color: var(--green);
+  background: rgb(27 127 95 / 8%);
 }
 
 .instagramStats {
@@ -1196,9 +1271,14 @@ button:hover,
   .videoComments,
   .instagramTopbar,
   .instagramConnect,
+  .instagramSourceBar,
   .instagramStats,
   .instagramBoard {
     grid-template-columns: 1fr;
+  }
+
+  .igSetupChecklist {
+    justify-content: flex-start;
   }
 
   .modeTabs {

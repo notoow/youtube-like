@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YouTube Comment Heart Helper</title>
-    <link rel="stylesheet" href="styles.css?v=20260519-instagram-api" />
+    <link rel="stylesheet" href="styles.css?v=20260519-instagram-status" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
   </head>
@@ -210,6 +210,19 @@
             </button>
           </div>
         </header>
+
+        <section class="instagramSourceBar" aria-label="Instagram 연결 상태">
+          <div>
+            <span class="igSourcePill">연결 확인 중</span>
+            <strong class="igSourceTitle">Instagram 데이터 소스 확인 중</strong>
+            <p class="igSourceDetail">Vercel API와 Meta 환경변수 연결 상태를 확인합니다.</p>
+          </div>
+          <div class="igSetupChecklist" aria-label="Vercel 필수 설정">
+            <span class="igSetupItem" data-key="token">META_ACCESS_TOKEN</span>
+            <span class="igSetupItem" data-key="account">INSTAGRAM_BUSINESS_ACCOUNT_ID</span>
+            <span class="igSetupItem" data-key="owner">INSTAGRAM_OWNER_USERNAME</span>
+          </div>
+        </section>
 
         <section class="instagramStats" aria-label="Instagram 요약">
           <article>
@@ -435,6 +448,6 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260519-instagram-api"></script>
+    <script src="app.js?v=20260519-instagram-status"></script>
   </body>
 </html>
