@@ -73,10 +73,22 @@ const authButton = document.querySelector("#authButton");
 const listEditors = [...document.querySelectorAll(".listEditor")];
 const copyPromptButton = document.querySelector("#copyPromptButton");
 const filterButtons = [...document.querySelectorAll(".filterButton")];
+const instagramUi = {
+  metaButton: document.querySelector("#instagramMockButton"),
+  mediaList: document.querySelector(".igMediaList"),
+  commentList: document.querySelector(".igCommentList"),
+  promptBox: document.querySelector(".igPromptBox"),
+  stats: [...document.querySelectorAll(".instagramStats article")],
+  filters: [...document.querySelectorAll(".igFilterSet button")],
+};
 
 let comments = [];
 let activeFilter = "needsReply";
 let activeMode = "youtube";
+let instagramLoaded = false;
+let instagramData = null;
+let selectedInstagramMediaId = "";
+let activeInstagramFilter = "all";
 let accessToken = "";
 let clinicGuidelines = [];
 let clinicStrengths = [];
@@ -120,6 +132,9 @@ function setMode(mode) {
   }
   shell.classList.toggle("instagramMode", mode === "instagram");
   instagramInbox.hidden = mode !== "instagram";
+  if (mode === "instagram") {
+    loadInstagramInbox();
+  }
   modeButtons.forEach((button) => {
     const isActive = button.dataset.mode === mode;
     button.classList.toggle("active", isActive);
@@ -253,6 +268,21 @@ filterButtons.forEach((button) => {
     filterButtons.forEach((item) => item.classList.toggle("active", item === button));
     renderComments();
   });
+});
+
+["all", "question", "price", "warning"].forEach((filter, index) => {
+  const button = instagramUi.filters[index];
+  if (!button) return;
+  button.dataset.igFilter = filter;
+  button.addEventListener("click", () => {
+    activeInstagramFilter = filter;
+    instagramUi.filters.forEach((item) => item.classList.toggle("active", item === button));
+    renderInstagramComments();
+  });
+});
+
+instagramUi.metaButton?.addEventListener("click", () => {
+  loadInstagramInbox({ force: true });
 });
 
 function hydrateChannels() {
@@ -944,6 +974,278 @@ function renderComments() {
 
   results.append(fragment);
   refreshIcons();
+}
+
+async function loadInstagramInbox({ force = false } = {}) {
+  if (instagramLoaded && !force) return;
+
+  instagramUi.metaButton.disabled = true;
+  setInstagramButtonLabel("불러오는 중");
+
+  try {
+    const response = await fetch("api/instagram/media?limit=50&commentsLimit=50");
+    if (!response.ok) throw new Error("Instagram API route is not available yet.");
+    instagramData = await response.json();
+    instagramLoaded = true;
+    selectedInstagramMediaId = instagramData.media?.[0]?.id || "";
+    renderInstagramInbox();
+    setInstagramButtonLabel(instagramData.source === "meta" ? "Meta 연결됨" : "샘플 보기");
+  } catch (error) {
+    instagramLoaded = true;
+    setInstagramButtonLabel("샘플 보기");
+  } finally {
+    instagramUi.metaButton.disabled = false;
+    refreshIcons();
+  }
+}
+
+function renderInstagramInbox() {
+  if (!instagramData?.media?.length) return;
+  renderInstagramStats();
+  renderInstagramMediaList();
+  renderInstagramComments();
+  renderInstagramPromptBox();
+}
+
+function renderInstagramStats() {
+  const stats = instagramData.stats || {};
+  const values = [
+    [stats.needsReply || 0, "답글 필요"],
+    [stats.questions || 0, "질문성 댓글"],
+    [stats.price || 0, "가격/상담 문의"],
+    [stats.warnings || 0, "주의 댓글"],
+  ];
+
+  values.forEach(([value, label], index) => {
+    const card = instagramUi.stats[index];
+    if (!card) return;
+    card.querySelector("strong").textContent = value;
+    card.querySelector("span").textContent = label;
+  });
+}
+
+function renderInstagramMediaList() {
+  instagramUi.mediaList.replaceChildren();
+  instagramData.media.forEach((media) => {
+    const item = document.createElement("article");
+    item.className = `igMediaItem${media.id === selectedInstagramMediaId ? " active" : ""}`;
+    item.tabIndex = 0;
+
+    const thumb = document.createElement("div");
+    thumb.className = "igThumb";
+    if (media.thumbnailUrl) {
+      thumb.style.backgroundImage = `url("${media.thumbnailUrl}")`;
+      thumb.style.backgroundSize = "cover";
+      thumb.style.backgroundPosition = "center";
+    }
+
+    const body = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = media.title || "Instagram 영상";
+    const count = document.createElement("p");
+    count.textContent = `댓글 ${media.commentsCount || media.comments?.length || 0}개 · 답글 필요 ${media.needsReplyCount || 0}개`;
+    body.append(title, count);
+    item.append(thumb, body);
+
+    item.addEventListener("click", () => selectInstagramMedia(media.id));
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectInstagramMedia(media.id);
+      }
+    });
+    instagramUi.mediaList.append(item);
+  });
+}
+
+function selectInstagramMedia(mediaId) {
+  selectedInstagramMediaId = mediaId;
+  renderInstagramMediaList();
+  renderInstagramComments();
+  renderInstagramPromptBox();
+}
+
+function renderInstagramComments() {
+  const media = getSelectedInstagramMedia();
+  if (!media) return;
+
+  instagramUi.commentList.replaceChildren();
+  getVisibleInstagramComments(media).forEach((comment) => {
+    instagramUi.commentList.append(renderInstagramCommentCard(media, comment));
+  });
+
+  if (!instagramUi.commentList.children.length) {
+    const empty = document.createElement("p");
+    empty.className = "channelEmpty";
+    empty.textContent = "현재 필터에 맞는 댓글이 없습니다.";
+    instagramUi.commentList.append(empty);
+  }
+}
+
+function renderInstagramCommentCard(media, comment) {
+  const card = document.createElement("article");
+  card.className = `igCommentCard${comment.category === "warning" ? " warning" : ""}`;
+
+  const header = document.createElement("header");
+  const avatar = document.createElement("div");
+  avatar.className = `avatar ${getInstagramAvatarClass(comment.category)}`;
+  const author = document.createElement("div");
+  const name = document.createElement("h3");
+  name.textContent = `@${comment.username || "instagram_user"}`;
+  const meta = document.createElement("p");
+  meta.textContent = `${formatDate(comment.timestamp)} · ${getInstagramCategoryLabel(comment.category)}`;
+  author.append(name, meta);
+  header.append(avatar, author);
+
+  const text = document.createElement("p");
+  text.textContent = comment.text || "";
+
+  const textarea = document.createElement("textarea");
+  textarea.rows = 3;
+  textarea.placeholder = "답글 초안 작성";
+
+  const footer = document.createElement("footer");
+  const badge = document.createElement("span");
+  badge.textContent = comment.hasOwnerReply ? "답글 완료" : "답글 없음";
+  const actions = document.createElement("div");
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.textContent = "AI 복사용";
+  copy.addEventListener("click", async () => {
+    await copyText(buildInstagramReplyPrompt(media, [comment]));
+    setStatus("Instagram 프롬프트 복사", `${media.title} 댓글 1개를 복사했습니다.`);
+  });
+  const reply = document.createElement("button");
+  reply.type = "button";
+  reply.textContent = "답글 달기";
+  reply.addEventListener("click", () => submitInstagramReply(comment, textarea, reply));
+  actions.append(copy, reply);
+  footer.append(badge, actions);
+
+  card.append(header, text, textarea, footer);
+  return card;
+}
+
+async function submitInstagramReply(comment, textarea, button) {
+  const message = textarea.value.trim();
+  if (!message) return;
+  if (instagramData?.source !== "meta") {
+    setStatus("Meta 설정 필요", "Vercel 환경변수와 Meta 권한이 연결되면 이 버튼으로 실제 답글을 달 수 있습니다.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "전송 중";
+  try {
+    const response = await fetch("api/instagram/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commentId: comment.id, message }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Instagram reply failed.");
+    comment.hasOwnerReply = true;
+    comment.replies = [
+      ...(comment.replies || []),
+      {
+        id: data.data?.id || `local-${Date.now()}`,
+        username: instagramData.account?.username || "owner",
+        text: message,
+        timestamp: new Date().toISOString(),
+      },
+    ];
+    textarea.value = "";
+    renderInstagramInbox();
+    setStatus("Instagram 답글 완료", `@${comment.username} 댓글에 답글을 달았습니다.`);
+  } catch (error) {
+    setStatus("Instagram 답글 실패", error.message || "답글 전송에 실패했습니다.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "답글 달기";
+  }
+}
+
+function renderInstagramPromptBox() {
+  const media = getSelectedInstagramMedia();
+  if (!media || !instagramUi.promptBox) return;
+  const count = getVisibleInstagramComments(media).filter((comment) => !comment.hasOwnerReply).length;
+  instagramUi.promptBox.querySelector("p").textContent =
+    `현재 선택한 영상의 답글 필요 댓글 ${count}개`;
+  const button = instagramUi.promptBox.querySelector("button");
+  button.onclick = async () => {
+    const comments = getVisibleInstagramComments(media).filter((comment) => !comment.hasOwnerReply);
+    if (!comments.length) {
+      setStatus("복사할 댓글 없음", "현재 선택한 영상에 답글 후보가 없습니다.");
+      return;
+    }
+    await copyText(buildInstagramReplyPrompt(media, comments));
+    setStatus("Instagram 프롬프트 복사", `${media.title} 댓글 ${comments.length}개를 복사했습니다.`);
+  };
+}
+
+function getSelectedInstagramMedia() {
+  return instagramData?.media?.find((media) => media.id === selectedInstagramMediaId) ||
+    instagramData?.media?.[0] ||
+    null;
+}
+
+function getVisibleInstagramComments(media) {
+  return (media.comments || []).filter((comment) => {
+    if (comment.hasOwnerReply) return false;
+    if (activeInstagramFilter === "all") return true;
+    return comment.category === activeInstagramFilter;
+  });
+}
+
+function buildInstagramReplyPrompt(media, targetComments) {
+  const lines = targetComments.map((comment, index) => {
+    return [
+      `${index + 1}.`,
+      `영상 제목(참고용): ${media.title}`,
+      `원댓글: ${comment.text}`,
+    ].join("\n");
+  });
+
+  return [
+    "아래는 Instagram 댓글 인박스에서 복사한 답글 후보 목록입니다.",
+    "영상 제목은 참고만 하고, 실제 댓글 내용에만 답글해 주세요.",
+    "",
+    "조건:",
+    "1. 이미 답글이 필요한 댓글만 대상으로 봅니다.",
+    "2. 의료 답변은 사실 기반으로만 작성하고 과장, 보장, 확정 표현은 피합니다.",
+    "3. 단순 반응 댓글은 코드블럭 안에 \"하트\"라고만 써 주세요.",
+    "4. 원댓글 일반 텍스트 + 답글 코드블럭만 순서대로 출력해 주세요.",
+    "",
+    "병원 답변 방향:",
+    formatNumberedRules(clinicGuidelines.length ? clinicGuidelines : DEFAULT_CLINIC_GUIDELINES),
+    "",
+    "부가 특장점:",
+    formatNumberedRules(clinicStrengths.length ? clinicStrengths : DEFAULT_CLINIC_STRENGTHS),
+    "",
+    "댓글 후보 목록:",
+    lines.join("\n\n"),
+  ].join("\n");
+}
+
+function getInstagramAvatarClass(category) {
+  if (category === "price") return "coral";
+  if (category === "warning") return "dark";
+  if (category === "reaction") return "green";
+  return "";
+}
+
+function getInstagramCategoryLabel(category) {
+  return {
+    question: "질문성",
+    price: "가격 문의",
+    warning: "주의 필요",
+    reaction: "단순 반응",
+  }[category] || "댓글";
+}
+
+function setInstagramButtonLabel(label) {
+  const labelNode = instagramUi.metaButton?.querySelector("span");
+  if (labelNode) labelNode.textContent = label;
 }
 
 function groupCommentsByChannel(commentList) {
