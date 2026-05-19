@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   clinicStrengths: "yt-heart-helper-clinic-strengths",
   clinicDefaultsVersion: "yt-heart-helper-clinic-defaults-version",
   instagramDoneIds: "yt-heart-helper-instagram-done-ids",
+  instagramMediaScope: "yt-heart-helper-instagram-media-scope",
   instagramScope: "yt-heart-helper-instagram-scope",
   viewMode: "yt-heart-helper-view-mode",
 };
@@ -79,6 +80,7 @@ const instagramUi = {
   metaButton: document.querySelector("#instagramMockButton"),
   refreshButton: document.querySelector("#instagramRefreshButton"),
   scopeInput: document.querySelector("#instagramScope"),
+  mediaScopeButtons: [...document.querySelectorAll("[data-ig-media-scope]")],
   mediaList: document.querySelector(".igMediaList"),
   commentList: document.querySelector(".igCommentList"),
   promptBox: document.querySelector(".igPromptBox"),
@@ -100,6 +102,7 @@ let instagramLoaded = false;
 let instagramData = null;
 let selectedInstagramMediaId = "";
 let activeInstagramFilter = "all";
+let activeInstagramMediaScope = "needs";
 let instagramDoneIds = new Set();
 let accessToken = "";
 let clinicGuidelines = [];
@@ -117,6 +120,8 @@ function init() {
     instagramUi.scopeInput.value =
       localStorage.getItem(STORAGE_KEYS.instagramScope) || instagramUi.scopeInput.value;
   }
+  activeInstagramMediaScope =
+    localStorage.getItem(STORAGE_KEYS.instagramMediaScope) || activeInstagramMediaScope;
   instagramDoneIds = readInstagramDoneIds();
   hydrateChannels();
   migrateClinicDefaults();
@@ -243,8 +248,10 @@ clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.clinicGuidelines);
   localStorage.removeItem(STORAGE_KEYS.clinicStrengths);
   localStorage.removeItem(STORAGE_KEYS.instagramDoneIds);
+  localStorage.removeItem(STORAGE_KEYS.instagramMediaScope);
   localStorage.setItem(STORAGE_KEYS.clinicDefaultsVersion, CLINIC_DEFAULTS_VERSION);
   accessToken = "";
+  activeInstagramMediaScope = "needs";
   instagramDoneIds = new Set();
   apiKeyInput.value = "";
   clientIdInput.value =
@@ -315,6 +322,16 @@ instagramUi.scopeInput?.addEventListener("change", () => {
 
 instagramUi.clearDoneButton?.addEventListener("click", () => {
   clearInstagramDoneMarks();
+});
+
+instagramUi.mediaScopeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    activeInstagramMediaScope = button.dataset.igMediaScope || "needs";
+    localStorage.setItem(STORAGE_KEYS.instagramMediaScope, activeInstagramMediaScope);
+    renderInstagramMediaList();
+    renderInstagramComments();
+    renderInstagramPromptBox();
+  });
 });
 
 function hydrateChannels() {
@@ -1255,7 +1272,26 @@ function renderInstagramStats() {
 
 function renderInstagramMediaList() {
   instagramUi.mediaList.replaceChildren();
-  instagramData.media.forEach((media) => {
+  const mediaItems = getVisibleInstagramMedia();
+  instagramUi.mediaScopeButtons.forEach((button) => {
+    const isActive = button.dataset.igMediaScope === activeInstagramMediaScope;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+
+  if (!mediaItems.some((media) => media.id === selectedInstagramMediaId)) {
+    selectedInstagramMediaId = mediaItems[0]?.id || instagramData.media?.[0]?.id || "";
+  }
+
+  if (!mediaItems.length) {
+    const empty = document.createElement("p");
+    empty.className = "channelEmpty";
+    empty.textContent = "답글 후보가 남은 영상이 없습니다.";
+    instagramUi.mediaList.append(empty);
+    return;
+  }
+
+  mediaItems.forEach((media) => {
     const item = document.createElement("article");
     item.className = `igMediaItem${media.id === selectedInstagramMediaId ? " active" : ""}`;
     item.tabIndex = 0;
@@ -1285,6 +1321,16 @@ function renderInstagramMediaList() {
     });
     instagramUi.mediaList.append(item);
   });
+}
+
+function getVisibleInstagramMedia() {
+  if (activeInstagramFilter === "done") {
+    return (instagramData.media || []).filter((media) =>
+      (media.comments || []).some((comment) => isInstagramCommentResolved(comment)),
+    );
+  }
+  if (activeInstagramMediaScope === "all") return instagramData.media || [];
+  return (instagramData.media || []).filter((media) => (media.needsReplyCount || 0) > 0);
 }
 
 function selectInstagramMedia(mediaId) {

@@ -1006,6 +1006,34 @@ button:hover,
   padding: 0 10px;
 }
 
+.igMediaHeaderActions,
+.igMediaScopeSet {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.igMediaScopeSet {
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--field);
+}
+
+.igMediaScopeSet button {
+  min-height: 28px;
+  border-color: transparent;
+  padding: 0 8px;
+  background: transparent;
+  font-size: 0.76rem;
+}
+
+.igMediaScopeSet button.active {
+  border-color: var(--ink);
+  color: #fff;
+  background: var(--ink);
+}
+
 .igPanelHeader svg {
   width: 15px;
   height: 15px;
