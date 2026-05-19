@@ -301,7 +301,7 @@ filterButtons.forEach((button) => {
   });
 });
 
-["all", "question", "price", "warning", "done"].forEach((filter, index) => {
+["all", "question", "price", "warning", "draft", "done"].forEach((filter, index) => {
   const button = instagramUi.filters[index];
   if (!button) return;
   button.dataset.igFilter = filter;
@@ -1347,7 +1347,12 @@ function renderInstagramMediaList() {
     const title = document.createElement("h3");
     title.textContent = media.title || "Instagram 영상";
     const count = document.createElement("p");
-    count.textContent = `댓글 ${media.commentsCount || media.comments?.length || 0}개 · 답글 필요 ${media.needsReplyCount || 0}개`;
+    const draftCount = countInstagramDraftsForMedia(media);
+    count.textContent = [
+      `댓글 ${media.commentsCount || media.comments?.length || 0}개`,
+      `답글 필요 ${media.needsReplyCount || 0}개`,
+      draftCount ? `초안 ${draftCount}개` : "",
+    ].filter(Boolean).join(" · ");
     body.append(title, count);
     item.append(thumb, body);
 
@@ -1368,8 +1373,17 @@ function getVisibleInstagramMedia() {
       (media.comments || []).some((comment) => isInstagramCommentResolved(comment)),
     );
   }
+  if (activeInstagramFilter === "draft") {
+    return (instagramData.media || []).filter((media) => countInstagramDraftsForMedia(media) > 0);
+  }
   if (activeInstagramMediaScope === "all") return instagramData.media || [];
   return (instagramData.media || []).filter((media) => (media.needsReplyCount || 0) > 0);
+}
+
+function countInstagramDraftsForMedia(media) {
+  return (media.comments || []).filter((comment) =>
+    !isInstagramCommentResolved(comment) && Boolean(getInstagramDraft(comment.id)),
+  ).length;
 }
 
 function selectInstagramMedia(mediaId) {
@@ -1570,6 +1584,9 @@ function getSelectedInstagramMedia() {
 function getVisibleInstagramComments(media) {
   return (media.comments || []).filter((comment) => {
     if (activeInstagramFilter === "done") return isInstagramCommentResolved(comment);
+    if (activeInstagramFilter === "draft") {
+      return !isInstagramCommentResolved(comment) && Boolean(getInstagramDraft(comment.id));
+    }
     if (isInstagramCommentResolved(comment)) return false;
     if (activeInstagramFilter === "all") return true;
     return comment.category === activeInstagramFilter;
@@ -1580,6 +1597,7 @@ function getInstagramPromptComments(media) {
   return (media.comments || []).filter((comment) => {
     if (isInstagramCommentResolved(comment)) return false;
     if (activeInstagramFilter === "done") return false;
+    if (activeInstagramFilter === "draft") return Boolean(getInstagramDraft(comment.id));
     if (activeInstagramFilter === "all") return true;
     return comment.category === activeInstagramFilter;
   });
