@@ -991,12 +991,124 @@ async function loadInstagramInbox({ force = false } = {}) {
     renderInstagramInbox();
     setInstagramButtonLabel(instagramData.source === "meta" ? "Meta 연결됨" : "샘플 보기");
   } catch (error) {
+    instagramData = getClientInstagramSampleInbox();
     instagramLoaded = true;
+    selectedInstagramMediaId = instagramData.media?.[0]?.id || "";
+    renderInstagramInbox();
     setInstagramButtonLabel("샘플 보기");
   } finally {
     instagramUi.metaButton.disabled = false;
     refreshIcons();
   }
+}
+
+function getClientInstagramSampleInbox() {
+  const media = [
+    {
+      id: "client-sample-media-1",
+      title: "수면마취 잘 안되는 사람 특징",
+      caption: "수면마취가 잘 안 되는 경우와 상담 전 확인할 점",
+      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
+      timestamp: "2026-05-19T08:30:00.000Z",
+      commentsCount: 37,
+      comments: [
+        createClientSampleComment("client-c1", "lager6591", "남자 여유증이랑 함몰유두도 동시에 수술이 가능한가요?", "question", 2),
+        createClientSampleComment("client-c2", "body_qna", "확대수술 비용은 재료마다 차이가 큰가요? 상담 전에 대략 알고 싶어요.", "price", 5),
+        createClientSampleComment("client-c3", "fast_growth", "이 제품 먹으면 수술 없이 무조건 커진다던데 병원에서도 추천하나요?", "warning", 24),
+        createClientSampleComment("client-c4", "real_review_82", "설명 깔끔하네요. 궁금했던 내용이 풀렸습니다.", "reaction", 28),
+      ],
+    },
+    {
+      id: "client-sample-media-2",
+      title: "확대수술 후 회복 과정",
+      caption: "동종진피 확대수술 후 회복과 사후관리",
+      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
+      timestamp: "2026-05-18T04:10:00.000Z",
+      commentsCount: 29,
+      comments: [
+        createClientSampleComment("client-c5", "clinic_question", "동종진피랑 필러는 회복 기간이 많이 다른가요?", "question", 9),
+        createClientSampleComment("client-c6", "natural_size", "자연스러운 정도가 제일 중요한데 상담 때 어떤 걸 보나요?", "question", 12),
+      ],
+    },
+    {
+      id: "client-sample-media-3",
+      title: "발기부전 치료 옵션 정리",
+      caption: "약물치료와 주사치료를 포함한 발기부전 상담",
+      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
+      timestamp: "2026-05-17T06:00:00.000Z",
+      commentsCount: 24,
+      comments: [
+        createClientSampleComment("client-c7", "health_check", "당뇨가 있어도 발기부전 주사치료 상담이 가능한가요?", "question", 18),
+        createClientSampleComment("client-c8", "ed_info", "약 먹어도 효과가 약하면 다음 단계는 뭔가요?", "question", 21),
+      ],
+    },
+    {
+      id: "client-sample-media-4",
+      title: "남성수술 상담 전 확인할 점",
+      caption: "수술 전 피부 여유, 재료, 기대치 확인",
+      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
+      timestamp: "2026-05-15T01:00:00.000Z",
+      commentsCount: 18,
+      comments: [
+        createClientSampleComment("client-c9", "first_visit", "상담할 때 사진이나 이전 수술 기록도 가져가야 하나요?", "question", 33),
+      ],
+    },
+    {
+      id: "client-sample-media-5",
+      title: "여유증 수술 Q&A",
+      caption: "여유증 수술과 회복 Q&A",
+      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
+      timestamp: "2026-05-12T05:40:00.000Z",
+      commentsCount: 16,
+      comments: [
+        createClientSampleComment("client-c10", "recovery_q", "운동은 보통 언제부터 다시 가능한가요?", "question", 45),
+      ],
+    },
+  ];
+
+  return addClientInstagramStats({
+    source: "client-sample",
+    needsConfiguration: true,
+    account: {
+      id: "client-sample",
+      username: "nonhyeon_dr_koo",
+    },
+    media,
+  });
+}
+
+function createClientSampleComment(id, username, text, category, hoursAgo) {
+  return {
+    id,
+    username,
+    text,
+    category,
+    timestamp: new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString(),
+    likeCount: Math.floor(hoursAgo / 2),
+    hasOwnerReply: false,
+    replies: [],
+  };
+}
+
+function addClientInstagramStats(inbox) {
+  const comments = inbox.media.flatMap((media) => media.comments || []);
+  const candidates = comments.filter((comment) => !comment.hasOwnerReply);
+  inbox.stats = {
+    needsReply: candidates.length,
+    questions: candidates.filter((comment) => comment.category === "question").length,
+    price: candidates.filter((comment) => comment.category === "price").length,
+    warnings: candidates.filter((comment) => comment.category === "warning").length,
+  };
+  inbox.media = inbox.media
+    .map((media) => ({
+      ...media,
+      needsReplyCount: (media.comments || []).filter((comment) => !comment.hasOwnerReply).length,
+    }))
+    .sort((a, b) => {
+      if (b.needsReplyCount !== a.needsReplyCount) return b.needsReplyCount - a.needsReplyCount;
+      return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+    });
+  return inbox;
 }
 
 function renderInstagramInbox() {
