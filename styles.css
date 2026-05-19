@@ -1170,6 +1170,7 @@ button:hover,
 .igCommentCard footer div,
 .igAiLinks {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1213,6 +1214,12 @@ button:hover,
 .igPromptBox button {
   gap: 7px;
   min-height: 38px;
+}
+
+.igSecondaryAction {
+  border-style: dashed;
+  color: var(--muted);
+  background: #fff;
 }
 
 .igPromptActions {

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YouTube Comment Heart Helper</title>
-    <link rel="stylesheet" href="styles.css?v=20260519-instagram-bulk-prompt" />
+    <link rel="stylesheet" href="styles.css?v=20260519-instagram-done-state" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
   </head>
@@ -416,6 +416,10 @@
                   Gemini
                 </a>
               </div>
+              <button type="button" id="instagramClearDoneButton" class="igSecondaryAction">
+                <i data-lucide="rotate-ccw"></i>
+                <span>완료 표시 초기화</span>
+              </button>
             </div>
             <div class="igQueue">
               <h3>처리 흐름</h3>
@@ -454,6 +458,6 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260519-instagram-bulk-prompt"></script>
+    <script src="app.js?v=20260519-instagram-done-state"></script>
   </body>
 </html>

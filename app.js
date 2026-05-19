@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   clinicGuidelines: "yt-heart-helper-clinic-guidelines",
   clinicStrengths: "yt-heart-helper-clinic-strengths",
   clinicDefaultsVersion: "yt-heart-helper-clinic-defaults-version",
+  instagramDoneIds: "yt-heart-helper-instagram-done-ids",
   instagramScope: "yt-heart-helper-instagram-scope",
   viewMode: "yt-heart-helper-view-mode",
 };
@@ -83,6 +84,7 @@ const instagramUi = {
   promptBox: document.querySelector(".igPromptBox"),
   promptSelectedButton: document.querySelector("[data-ig-prompt='selected']"),
   promptAllButton: document.querySelector("[data-ig-prompt='all']"),
+  clearDoneButton: document.querySelector("#instagramClearDoneButton"),
   sourcePill: document.querySelector(".igSourcePill"),
   sourceTitle: document.querySelector(".igSourceTitle"),
   sourceDetail: document.querySelector(".igSourceDetail"),
@@ -98,6 +100,7 @@ let instagramLoaded = false;
 let instagramData = null;
 let selectedInstagramMediaId = "";
 let activeInstagramFilter = "all";
+let instagramDoneIds = new Set();
 let accessToken = "";
 let clinicGuidelines = [];
 let clinicStrengths = [];
@@ -114,6 +117,7 @@ function init() {
     instagramUi.scopeInput.value =
       localStorage.getItem(STORAGE_KEYS.instagramScope) || instagramUi.scopeInput.value;
   }
+  instagramDoneIds = readInstagramDoneIds();
   hydrateChannels();
   migrateClinicDefaults();
   clinicGuidelines = readRuleList(STORAGE_KEYS.clinicGuidelines, DEFAULT_CLINIC_GUIDELINES);
@@ -238,8 +242,10 @@ clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.clientId);
   localStorage.removeItem(STORAGE_KEYS.clinicGuidelines);
   localStorage.removeItem(STORAGE_KEYS.clinicStrengths);
+  localStorage.removeItem(STORAGE_KEYS.instagramDoneIds);
   localStorage.setItem(STORAGE_KEYS.clinicDefaultsVersion, CLINIC_DEFAULTS_VERSION);
   accessToken = "";
+  instagramDoneIds = new Set();
   apiKeyInput.value = "";
   clientIdInput.value =
     "550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com";
@@ -305,6 +311,10 @@ instagramUi.refreshButton?.addEventListener("click", () => {
 instagramUi.scopeInput?.addEventListener("change", () => {
   localStorage.setItem(STORAGE_KEYS.instagramScope, instagramUi.scopeInput.value);
   loadInstagramInbox({ force: true });
+});
+
+instagramUi.clearDoneButton?.addEventListener("click", () => {
+  clearInstagramDoneMarks();
 });
 
 function hydrateChannels() {
@@ -1036,6 +1046,30 @@ function getInstagramScope() {
   return instagramUi.scopeInput?.value || "50";
 }
 
+function readInstagramDoneIds() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.instagramDoneIds) || "[]");
+    return new Set(Array.isArray(stored) ? stored.filter(Boolean) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistInstagramDoneIds() {
+  localStorage.setItem(STORAGE_KEYS.instagramDoneIds, JSON.stringify([...instagramDoneIds].slice(-2000)));
+}
+
+function clearInstagramDoneMarks() {
+  instagramDoneIds = new Set();
+  localStorage.removeItem(STORAGE_KEYS.instagramDoneIds);
+  if (instagramData) {
+    applyInstagramDoneState();
+    recalculateInstagramStats();
+    renderInstagramInbox();
+  }
+  setStatus("Instagram 완료 표시 초기화", "이 브라우저에 저장된 Instagram 처리 완료 표시를 지웠습니다.");
+}
+
 function getClientInstagramSampleInbox() {
   const media = [
     {
@@ -1125,8 +1159,23 @@ function createClientSampleComment(id, username, text, category, hoursAgo) {
 }
 
 function addClientInstagramStats(inbox) {
+  return recalculateInstagramStats(inbox);
+}
+
+function applyInstagramDoneState(inbox = instagramData) {
+  if (!inbox?.media) return inbox;
+  inbox.media.forEach((media) => {
+    (media.comments || []).forEach((comment) => {
+      comment.localDone = instagramDoneIds.has(comment.id);
+    });
+  });
+  return inbox;
+}
+
+function recalculateInstagramStats(inbox = instagramData) {
+  if (!inbox?.media) return inbox;
   const comments = inbox.media.flatMap((media) => media.comments || []);
-  const candidates = comments.filter((comment) => !comment.hasOwnerReply);
+  const candidates = comments.filter((comment) => !isInstagramCommentResolved(comment));
   inbox.stats = {
     needsReply: candidates.length,
     questions: candidates.filter((comment) => comment.category === "question").length,
@@ -1136,7 +1185,7 @@ function addClientInstagramStats(inbox) {
   inbox.media = inbox.media
     .map((media) => ({
       ...media,
-      needsReplyCount: (media.comments || []).filter((comment) => !comment.hasOwnerReply).length,
+      needsReplyCount: (media.comments || []).filter((comment) => !isInstagramCommentResolved(comment)).length,
     }))
     .sort((a, b) => {
       if (b.needsReplyCount !== a.needsReplyCount) return b.needsReplyCount - a.needsReplyCount;
@@ -1147,6 +1196,8 @@ function addClientInstagramStats(inbox) {
 
 function renderInstagramInbox() {
   if (!instagramData?.media?.length) return;
+  applyInstagramDoneState();
+  recalculateInstagramStats();
   renderInstagramSourceStatus();
   renderInstagramStats();
   renderInstagramMediaList();
@@ -1284,7 +1335,7 @@ function renderInstagramCommentCard(media, comment) {
 
   const footer = document.createElement("footer");
   const badge = document.createElement("span");
-  badge.textContent = comment.hasOwnerReply ? "답글 완료" : "답글 없음";
+  badge.textContent = getInstagramCommentStateLabel(comment);
   const actions = document.createElement("div");
   const copy = document.createElement("button");
   copy.type = "button";
@@ -1293,15 +1344,38 @@ function renderInstagramCommentCard(media, comment) {
     await copyText(buildInstagramReplyPrompt(media, [comment]));
     setStatus("Instagram 프롬프트 복사", `${media.title} 댓글 1개를 복사했습니다.`);
   });
+  const done = document.createElement("button");
+  done.type = "button";
+  done.textContent = "처리 완료";
+  done.addEventListener("click", () => markInstagramCommentDone(comment));
   const reply = document.createElement("button");
   reply.type = "button";
   reply.textContent = "답글 달기";
   reply.addEventListener("click", () => submitInstagramReply(comment, textarea, reply));
-  actions.append(copy, reply);
+  actions.append(copy, done, reply);
   footer.append(badge, actions);
 
   card.append(header, text, textarea, footer);
   return card;
+}
+
+function getInstagramCommentStateLabel(comment) {
+  if (comment.hasOwnerReply) return "답글 완료";
+  if (comment.localDone) return "처리 완료";
+  return "답글 없음";
+}
+
+function isInstagramCommentResolved(comment) {
+  return Boolean(comment?.hasOwnerReply || comment?.localDone);
+}
+
+function markInstagramCommentDone(comment) {
+  if (!comment?.id) return;
+  instagramDoneIds.add(comment.id);
+  persistInstagramDoneIds();
+  comment.localDone = true;
+  renderInstagramInbox();
+  setStatus("Instagram 처리 완료", `@${comment.username || "instagram_user"} 댓글을 완료 처리했습니다.`);
 }
 
 async function submitInstagramReply(comment, textarea, button) {
@@ -1383,7 +1457,7 @@ function getSelectedInstagramMedia() {
 
 function getVisibleInstagramComments(media) {
   return (media.comments || []).filter((comment) => {
-    if (comment.hasOwnerReply) return false;
+    if (isInstagramCommentResolved(comment)) return false;
     if (activeInstagramFilter === "all") return true;
     return comment.category === activeInstagramFilter;
   });
