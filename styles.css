@@ -1121,6 +1121,20 @@ button:hover,
   border-color: rgb(229 57 53 / 52%);
 }
 
+.igCommentCard.resolved {
+  border-style: dashed;
+  background: rgb(248 250 252 / 92%);
+}
+
+.igCommentCard.resolved > p {
+  color: var(--muted);
+}
+
+.igCommentCard textarea:disabled {
+  color: var(--muted);
+  background: #fff;
+}
+
 .igCommentCard header,
 .igCommentCard footer {
   display: flex;

@@ -289,7 +289,7 @@ filterButtons.forEach((button) => {
   });
 });
 
-["all", "question", "price", "warning"].forEach((filter, index) => {
+["all", "question", "price", "warning", "done"].forEach((filter, index) => {
   const button = instagramUi.filters[index];
   if (!button) return;
   button.dataset.igFilter = filter;
@@ -1314,6 +1314,7 @@ function renderInstagramComments() {
 function renderInstagramCommentCard(media, comment) {
   const card = document.createElement("article");
   card.className = `igCommentCard${comment.category === "warning" ? " warning" : ""}`;
+  card.classList.toggle("resolved", isInstagramCommentResolved(comment));
 
   const header = document.createElement("header");
   const avatar = document.createElement("div");
@@ -1332,6 +1333,7 @@ function renderInstagramCommentCard(media, comment) {
   const textarea = document.createElement("textarea");
   textarea.rows = 3;
   textarea.placeholder = "답글 초안 작성";
+  textarea.disabled = isInstagramCommentResolved(comment);
 
   const footer = document.createElement("footer");
   const badge = document.createElement("span");
@@ -1352,7 +1354,15 @@ function renderInstagramCommentCard(media, comment) {
   reply.type = "button";
   reply.textContent = "답글 달기";
   reply.addEventListener("click", () => submitInstagramReply(comment, textarea, reply));
-  actions.append(copy, done, reply);
+  if (!isInstagramCommentResolved(comment)) {
+    actions.append(copy, done, reply);
+  } else if (comment.localDone && !comment.hasOwnerReply) {
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.textContent = "처리 취소";
+    undo.addEventListener("click", () => unmarkInstagramCommentDone(comment));
+    actions.append(undo);
+  }
   footer.append(badge, actions);
 
   card.append(header, text, textarea, footer);
@@ -1376,6 +1386,15 @@ function markInstagramCommentDone(comment) {
   comment.localDone = true;
   renderInstagramInbox();
   setStatus("Instagram 처리 완료", `@${comment.username || "instagram_user"} 댓글을 완료 처리했습니다.`);
+}
+
+function unmarkInstagramCommentDone(comment) {
+  if (!comment?.id) return;
+  instagramDoneIds.delete(comment.id);
+  persistInstagramDoneIds();
+  comment.localDone = false;
+  renderInstagramInbox();
+  setStatus("Instagram 처리 취소", `@${comment.username || "instagram_user"} 댓글을 답글 후보로 되돌렸습니다.`);
 }
 
 async function submitInstagramReply(comment, textarea, button) {
@@ -1420,7 +1439,7 @@ async function submitInstagramReply(comment, textarea, button) {
 function renderInstagramPromptBox() {
   const media = getSelectedInstagramMedia();
   if (!media || !instagramUi.promptBox) return;
-  const selectedComments = getVisibleInstagramComments(media);
+  const selectedComments = getInstagramPromptComments(media);
   const promptGroups = getInstagramPromptGroups();
   const totalCount = countInstagramPromptComments(promptGroups);
   instagramUi.promptBox.querySelector("p").textContent =
@@ -1457,7 +1476,17 @@ function getSelectedInstagramMedia() {
 
 function getVisibleInstagramComments(media) {
   return (media.comments || []).filter((comment) => {
+    if (activeInstagramFilter === "done") return isInstagramCommentResolved(comment);
     if (isInstagramCommentResolved(comment)) return false;
+    if (activeInstagramFilter === "all") return true;
+    return comment.category === activeInstagramFilter;
+  });
+}
+
+function getInstagramPromptComments(media) {
+  return (media.comments || []).filter((comment) => {
+    if (isInstagramCommentResolved(comment)) return false;
+    if (activeInstagramFilter === "done") return false;
     if (activeInstagramFilter === "all") return true;
     return comment.category === activeInstagramFilter;
   });
@@ -1467,7 +1496,7 @@ function getInstagramPromptGroups() {
   return (instagramData?.media || [])
     .map((media) => ({
       media,
-      comments: getVisibleInstagramComments(media),
+      comments: getInstagramPromptComments(media),
     }))
     .filter((group) => group.comments.length);
 }
