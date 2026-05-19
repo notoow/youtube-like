@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   clinicGuidelines: "yt-heart-helper-clinic-guidelines",
   clinicStrengths: "yt-heart-helper-clinic-strengths",
   clinicDefaultsVersion: "yt-heart-helper-clinic-defaults-version",
+  instagramScope: "yt-heart-helper-instagram-scope",
   viewMode: "yt-heart-helper-view-mode",
 };
 
@@ -75,6 +76,8 @@ const copyPromptButton = document.querySelector("#copyPromptButton");
 const filterButtons = [...document.querySelectorAll(".filterButton")];
 const instagramUi = {
   metaButton: document.querySelector("#instagramMockButton"),
+  refreshButton: document.querySelector("#instagramRefreshButton"),
+  scopeInput: document.querySelector("#instagramScope"),
   mediaList: document.querySelector(".igMediaList"),
   commentList: document.querySelector(".igCommentList"),
   promptBox: document.querySelector(".igPromptBox"),
@@ -105,6 +108,10 @@ function init() {
   apiKeyInput.value = localStorage.getItem(STORAGE_KEYS.apiKey) || "";
   clientIdInput.value =
     localStorage.getItem(STORAGE_KEYS.clientId) || clientIdInput.value;
+  if (instagramUi.scopeInput) {
+    instagramUi.scopeInput.value =
+      localStorage.getItem(STORAGE_KEYS.instagramScope) || instagramUi.scopeInput.value;
+  }
   hydrateChannels();
   migrateClinicDefaults();
   clinicGuidelines = readRuleList(STORAGE_KEYS.clinicGuidelines, DEFAULT_CLINIC_GUIDELINES);
@@ -286,6 +293,15 @@ filterButtons.forEach((button) => {
 });
 
 instagramUi.metaButton?.addEventListener("click", () => {
+  loadInstagramInbox({ force: true });
+});
+
+instagramUi.refreshButton?.addEventListener("click", () => {
+  loadInstagramInbox({ force: true });
+});
+
+instagramUi.scopeInput?.addEventListener("change", () => {
+  localStorage.setItem(STORAGE_KEYS.instagramScope, instagramUi.scopeInput.value);
   loadInstagramInbox({ force: true });
 });
 
@@ -983,11 +999,18 @@ function renderComments() {
 async function loadInstagramInbox({ force = false } = {}) {
   if (instagramLoaded && !force) return;
 
+  const scope = getInstagramScope();
+  const params = new URLSearchParams({
+    limit: scope,
+    commentsLimit: scope === "all" ? "100" : "50",
+  });
+
   instagramUi.metaButton.disabled = true;
+  if (instagramUi.refreshButton) instagramUi.refreshButton.disabled = true;
   setInstagramButtonLabel("불러오는 중");
 
   try {
-    const response = await fetch("api/instagram/media?limit=50&commentsLimit=50");
+    const response = await fetch(`api/instagram/media?${params}`);
     if (!response.ok) throw new Error("Instagram API route is not available yet.");
     instagramData = await response.json();
     instagramLoaded = true;
@@ -1002,8 +1025,13 @@ async function loadInstagramInbox({ force = false } = {}) {
     setInstagramButtonLabel("샘플 보기");
   } finally {
     instagramUi.metaButton.disabled = false;
+    if (instagramUi.refreshButton) instagramUi.refreshButton.disabled = false;
     refreshIcons();
   }
+}
+
+function getInstagramScope() {
+  return instagramUi.scopeInput?.value || "50";
 }
 
 function getClientInstagramSampleInbox() {

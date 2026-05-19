@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YouTube Comment Heart Helper</title>
-    <link rel="stylesheet" href="styles.css?v=20260519-instagram-status" />
+    <link rel="stylesheet" href="styles.css?v=20260519-instagram-scope" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
   </head>
@@ -198,10 +198,10 @@
             </label>
             <label>
               <span>범위</span>
-              <select>
-                <option>최근 댓글 영상 50개</option>
-                <option>최근 댓글 영상 100개</option>
-                <option>전체 동기화</option>
+              <select id="instagramScope">
+                <option value="50">최근 댓글 영상 50개</option>
+                <option value="100">최근 댓글 영상 100개</option>
+                <option value="all">전체 동기화</option>
               </select>
             </label>
             <button type="button" id="instagramMockButton">
@@ -250,7 +250,7 @@
                 <h2>영상 우선순위</h2>
                 <p>최근 댓글순 · 답글 필요순</p>
               </div>
-              <button type="button" title="새로고침" aria-label="새로고침">
+              <button type="button" id="instagramRefreshButton" title="새로고침" aria-label="새로고침">
                 <i data-lucide="refresh-cw"></i>
               </button>
             </div>
@@ -448,6 +448,6 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260519-instagram-status"></script>
+    <script src="app.js?v=20260519-instagram-scope"></script>
   </body>
 </html>
