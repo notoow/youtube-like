@@ -87,6 +87,9 @@ const instagramUi = {
   promptBox: document.querySelector(".igPromptBox"),
   promptSelectedButton: document.querySelector("[data-ig-prompt='selected']"),
   promptAllButton: document.querySelector("[data-ig-prompt='all']"),
+  aiPasteInput: document.querySelector("#instagramAiPaste"),
+  applySelectedButton: document.querySelector("[data-ig-apply='selected']"),
+  applyAllButton: document.querySelector("[data-ig-apply='all']"),
   clearDoneButton: document.querySelector("#instagramClearDoneButton"),
   sourcePill: document.querySelector(".igSourcePill"),
   sourceTitle: document.querySelector(".igSourceTitle"),
@@ -1573,6 +1576,18 @@ function renderInstagramPromptBox() {
       setStatus("Instagram 전체 프롬프트 복사", `불러온 영상 전체에서 댓글 후보 ${totalCount}개를 복사했습니다.`);
     };
   }
+
+  if (instagramUi.applySelectedButton) {
+    instagramUi.applySelectedButton.onclick = () => {
+      applyInstagramAiRepliesToDrafts([{ media, comments: selectedComments }], "선택 영상");
+    };
+  }
+
+  if (instagramUi.applyAllButton) {
+    instagramUi.applyAllButton.onclick = () => {
+      applyInstagramAiRepliesToDrafts(promptGroups, "전체 후보");
+    };
+  }
 }
 
 function getSelectedInstagramMedia() {
@@ -1614,6 +1629,67 @@ function getInstagramPromptGroups() {
 
 function countInstagramPromptComments(groups) {
   return groups.reduce((sum, group) => sum + group.comments.length, 0);
+}
+
+function applyInstagramAiRepliesToDrafts(groups, scopeLabel) {
+  const replies = parseInstagramAiReplies(instagramUi.aiPasteInput?.value || "");
+  const entries = groups.flatMap((group) =>
+    group.comments.map((comment) => ({ media: group.media, comment })),
+  );
+
+  if (!entries.length) {
+    setStatus("적용할 댓글 없음", `${scopeLabel}에 답글 후보가 없습니다.`);
+    return;
+  }
+  if (!replies.length) {
+    setStatus("붙여넣기 필요", "GPT/Gemini에서 받은 코드블럭 답글을 먼저 붙여넣어 주세요.");
+    return;
+  }
+
+  const count = Math.min(entries.length, replies.length);
+  let draftCount = 0;
+  let doneCount = 0;
+
+  for (let index = 0; index < count; index += 1) {
+    const { comment } = entries[index];
+    const reply = replies[index];
+    if (isHeartOnlyReply(reply)) {
+      instagramDoneIds.add(comment.id);
+      clearInstagramDraft(comment.id);
+      comment.localDone = true;
+      doneCount += 1;
+    } else {
+      setInstagramDraft(comment.id, reply);
+      draftCount += 1;
+    }
+  }
+
+  persistInstagramDoneIds();
+  if (instagramUi.aiPasteInput) instagramUi.aiPasteInput.value = "";
+  renderInstagramInbox();
+  setStatus(
+    "AI 답글 초안 적용",
+    `${scopeLabel}에서 초안 ${draftCount}개를 저장하고, 하트 처리 ${doneCount}개를 완료 표시했습니다. (${count}/${entries.length}개 적용)`,
+  );
+}
+
+function parseInstagramAiReplies(text) {
+  const source = String(text || "").trim();
+  if (!source) return [];
+
+  const blocks = [...source.matchAll(/```(?:[a-z0-9_-]+)?\s*([\s\S]*?)```/gi)]
+    .map((match) => match[1].trim())
+    .filter(Boolean);
+  if (blocks.length) return blocks;
+
+  return source
+    .split(/\n{2,}/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function isHeartOnlyReply(text) {
+  return String(text || "").replace(/\s+/g, "").toLowerCase() === "하트";
 }
 
 function buildInstagramReplyPrompt(media, targetComments) {
