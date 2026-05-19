@@ -1647,6 +1647,19 @@ function applyInstagramAiRepliesToDrafts(groups, scopeLabel) {
   }
 
   const count = Math.min(entries.length, replies.length);
+  if (replies.length !== entries.length) {
+    const message =
+      `${scopeLabel}: 댓글 후보 ${entries.length}개, 붙여넣은 답글 ${replies.length}개입니다.\n` +
+      `앞에서부터 ${count}개만 적용할까요?`;
+    if (!window.confirm(message)) {
+      setStatus(
+        "AI 답글 개수 불일치",
+        `${scopeLabel} 후보 ${entries.length}개와 붙여넣은 답글 ${replies.length}개가 달라 적용하지 않았습니다.`,
+      );
+      return;
+    }
+  }
+
   let draftCount = 0;
   let doneCount = 0;
 
