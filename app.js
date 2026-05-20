@@ -83,6 +83,7 @@ const filterButtons = [...document.querySelectorAll(".filterButton")];
 const instagramUi = {
   loadButton: document.querySelector("#instagramLoadButton"),
   refreshButton: document.querySelector("#instagramRefreshButton"),
+  healthButton: document.querySelector("#instagramHealthButton"),
   apiBaseInput: document.querySelector("#instagramApiBase"),
   adminKeyInput: document.querySelector("#instagramAdminKey"),
   scopeInput: document.querySelector("#instagramScope"),
@@ -337,6 +338,10 @@ instagramUi.loadButton?.addEventListener("click", () => {
 
 instagramUi.refreshButton?.addEventListener("click", () => {
   loadInstagramInbox({ force: true });
+});
+
+instagramUi.healthButton?.addEventListener("click", () => {
+  testInstagramConnection();
 });
 
 instagramUi.scopeInput?.addEventListener("change", () => {
@@ -1110,6 +1115,41 @@ async function loadInstagramInbox({ force = false } = {}) {
   } finally {
     instagramUi.loadButton.disabled = false;
     if (instagramUi.refreshButton) instagramUi.refreshButton.disabled = false;
+    refreshIcons();
+  }
+}
+
+async function testInstagramConnection() {
+  if (instagramUi.healthButton) instagramUi.healthButton.disabled = true;
+  setStatus("Instagram 연결 테스트", "Vercel API, 운영 키, Meta 계정 접근을 확인하고 있습니다.");
+
+  try {
+    const response = await fetch(buildInstagramApiUrl("/api/instagram/health"), {
+      headers: buildInstagramApiHeaders({ Accept: "application/json" }),
+    });
+    if (!response.ok) {
+      throw new Error(await readApiError(response, "Instagram 연결 테스트에 실패했습니다."));
+    }
+
+    const data = await response.json();
+    const account = data.account?.username ? `@${data.account.username}` : "Instagram 계정";
+    setStatus(
+      "Instagram 연결 정상",
+      `${account} 계정 접근이 확인됐습니다. 이제 댓글 불러오기를 사용할 수 있습니다.`,
+    );
+    if (instagramData) {
+      instagramData.source = "meta";
+      instagramData.account = data.account || instagramData.account;
+      instagramData.apiBase = getInstagramApiBase() || window.location.origin;
+      renderInstagramSourceStatus();
+    }
+  } catch (error) {
+    console.error(error);
+    instagramData = createInstagramErrorInbox(error);
+    renderInstagramInbox();
+    setStatus("Instagram 연결 테스트 실패", error.message || "Vercel API 설정을 확인해 주세요.");
+  } finally {
+    if (instagramUi.healthButton) instagramUi.healthButton.disabled = false;
     refreshIcons();
   }
 }

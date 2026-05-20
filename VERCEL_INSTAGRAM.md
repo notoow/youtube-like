@@ -33,6 +33,8 @@ INSTAGRAM_ADMIN_KEY=make-a-long-random-private-key
 
 API routes:
 
+- `GET /api/instagram/health` checks the admin key, Meta credentials, and
+  Instagram account access without loading the full comment inbox.
 - `GET /api/instagram/media` loads recent media and comments.
 - `POST /api/instagram/reply` replies to a comment when Meta permissions are ready.
 

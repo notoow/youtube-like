@@ -903,6 +903,14 @@ button:hover,
   line-height: 1.4;
 }
 
+.igSetupTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .igSetupChecklist {
   display: flex;
   flex-wrap: wrap;
@@ -928,6 +936,18 @@ button:hover,
   border-color: rgb(27 127 95 / 30%);
   color: var(--green);
   background: rgb(27 127 95 / 8%);
+}
+
+.igHealthButton {
+  min-height: 30px;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
+.igHealthButton svg {
+  width: 14px;
+  height: 14px;
 }
 
 .instagramStats {
@@ -1356,6 +1376,7 @@ button:hover,
     grid-template-columns: 1fr;
   }
 
+  .igSetupTools,
   .igSetupChecklist {
     justify-content: flex-start;
   }
