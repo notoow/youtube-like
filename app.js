@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   instagramDoneIds: "yt-heart-helper-instagram-done-ids",
   instagramDrafts: "yt-heart-helper-instagram-drafts",
   instagramApiBase: "yt-heart-helper-instagram-api-base",
+  instagramAdminKey: "yt-heart-helper-instagram-admin-key",
   instagramMediaScope: "yt-heart-helper-instagram-media-scope",
   instagramScope: "yt-heart-helper-instagram-scope",
   viewMode: "yt-heart-helper-view-mode",
@@ -83,6 +84,7 @@ const instagramUi = {
   loadButton: document.querySelector("#instagramLoadButton"),
   refreshButton: document.querySelector("#instagramRefreshButton"),
   apiBaseInput: document.querySelector("#instagramApiBase"),
+  adminKeyInput: document.querySelector("#instagramAdminKey"),
   scopeInput: document.querySelector("#instagramScope"),
   mediaScopeButtons: [...document.querySelectorAll("[data-ig-media-scope]")],
   mediaList: document.querySelector(".igMediaList"),
@@ -131,6 +133,9 @@ function init() {
   if (instagramUi.apiBaseInput) {
     instagramUi.apiBaseInput.value =
       localStorage.getItem(STORAGE_KEYS.instagramApiBase) || getDefaultInstagramApiBase();
+  }
+  if (instagramUi.adminKeyInput) {
+    instagramUi.adminKeyInput.value = localStorage.getItem(STORAGE_KEYS.instagramAdminKey) || "";
   }
   activeInstagramMediaScope =
     localStorage.getItem(STORAGE_KEYS.instagramMediaScope) || activeInstagramMediaScope;
@@ -263,6 +268,7 @@ clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.instagramDoneIds);
   localStorage.removeItem(STORAGE_KEYS.instagramDrafts);
   localStorage.removeItem(STORAGE_KEYS.instagramApiBase);
+  localStorage.removeItem(STORAGE_KEYS.instagramAdminKey);
   localStorage.removeItem(STORAGE_KEYS.instagramMediaScope);
   localStorage.setItem(STORAGE_KEYS.clinicDefaultsVersion, CLINIC_DEFAULTS_VERSION);
   accessToken = "";
@@ -275,6 +281,7 @@ clearButton.addEventListener("click", () => {
   resetChannelInputs();
   activeChannels = [];
   if (instagramUi.apiBaseInput) instagramUi.apiBaseInput.value = getDefaultInstagramApiBase();
+  if (instagramUi.adminKeyInput) instagramUi.adminKeyInput.value = "";
   clinicGuidelines = [...DEFAULT_CLINIC_GUIDELINES];
   clinicStrengths = [...DEFAULT_CLINIC_STRENGTHS];
   renderAllRuleLists();
@@ -345,6 +352,16 @@ instagramUi.apiBaseInput?.addEventListener("change", () => {
     localStorage.removeItem(STORAGE_KEYS.instagramApiBase);
   }
   instagramUi.apiBaseInput.value = apiBase || getDefaultInstagramApiBase();
+  loadInstagramInbox({ force: true });
+});
+
+instagramUi.adminKeyInput?.addEventListener("change", () => {
+  const adminKey = getInstagramAdminKey();
+  if (adminKey) {
+    localStorage.setItem(STORAGE_KEYS.instagramAdminKey, adminKey);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.instagramAdminKey);
+  }
   loadInstagramInbox({ force: true });
 });
 
@@ -1068,7 +1085,7 @@ async function loadInstagramInbox({ force = false } = {}) {
 
   try {
     const response = await fetch(buildInstagramApiUrl("/api/instagram/media", params), {
-      headers: { Accept: "application/json" },
+      headers: buildInstagramApiHeaders({ Accept: "application/json" }),
     });
     if (!response.ok) {
       throw new Error(await readApiError(response, "Instagram API에서 댓글을 불러오지 못했습니다."));
@@ -1113,6 +1130,17 @@ function getInstagramApiBase() {
   const inputValue = instagramUi.apiBaseInput?.value || "";
   const storedValue = localStorage.getItem(STORAGE_KEYS.instagramApiBase) || "";
   return normalizeInstagramApiBase(inputValue || storedValue || getDefaultInstagramApiBase());
+}
+
+function getInstagramAdminKey() {
+  return String(
+    instagramUi.adminKeyInput?.value || localStorage.getItem(STORAGE_KEYS.instagramAdminKey) || "",
+  ).trim();
+}
+
+function buildInstagramApiHeaders(headers = {}) {
+  const adminKey = getInstagramAdminKey();
+  return adminKey ? { ...headers, "X-Instagram-Admin-Key": adminKey } : headers;
 }
 
 function buildInstagramApiUrl(path, params) {
@@ -1276,11 +1304,13 @@ function renderInstagramSourceStatus() {
   instagramUi.setupItems.forEach((item) => {
     item.classList.toggle("ready", isMeta);
     const prefix = isMeta ? "완료" : "필요";
-    item.textContent = `${prefix}: ${item.dataset.key === "token"
-      ? "META_ACCESS_TOKEN"
-      : item.dataset.key === "account"
-        ? "INSTAGRAM_BUSINESS_ACCOUNT_ID"
-        : "INSTAGRAM_OWNER_USERNAME"}`;
+    const envNames = {
+      token: "META_ACCESS_TOKEN",
+      account: "INSTAGRAM_BUSINESS_ACCOUNT_ID",
+      owner: "INSTAGRAM_OWNER_USERNAME",
+      admin: "INSTAGRAM_ADMIN_KEY",
+    };
+    item.textContent = `${prefix}: ${envNames[item.dataset.key] || item.dataset.key}`;
   });
 }
 
@@ -1516,7 +1546,7 @@ async function submitInstagramReply(comment, textarea, button) {
   try {
     const response = await fetch(buildInstagramApiUrl("/api/instagram/reply"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildInstagramApiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ commentId: comment.id, message }),
     });
     const data = await response.json();

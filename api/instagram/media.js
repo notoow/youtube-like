@@ -1,9 +1,9 @@
-const { buildInstagramInbox } = require("../../lib/instagram");
+const { buildInstagramInbox, verifyInstagramAdminKey } = require("../../lib/instagram");
 
 function setCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Accept, Content-Type, X-Instagram-Admin-Key");
 }
 
 module.exports = async function handler(req, res) {
@@ -21,6 +21,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    verifyInstagramAdminKey(req);
     const inbox = await buildInstagramInbox({
       limit: req.query.limit,
       commentsLimit: req.query.commentsLimit,

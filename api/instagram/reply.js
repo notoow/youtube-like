@@ -1,9 +1,9 @@
-const { replyToInstagramComment } = require("../../lib/instagram");
+const { replyToInstagramComment, verifyInstagramAdminKey } = require("../../lib/instagram");
 
 function setCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Accept, Content-Type, X-Instagram-Admin-Key");
 }
 
 module.exports = async function handler(req, res) {
@@ -21,6 +21,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    verifyInstagramAdminKey(req);
     const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
     const data = await replyToInstagramComment({
       commentId: String(body.commentId || "").trim(),

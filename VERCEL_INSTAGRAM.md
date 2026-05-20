@@ -13,6 +13,10 @@ https://youtube-like.vercel.app
 If the Vercel project uses a different domain, update the `API 주소` field in
 the Instagram header. The value is saved in the browser.
 
+Set the same private value in Vercel `INSTAGRAM_ADMIN_KEY` and in the
+Instagram header `운영 키` field. Both comment loading and replying require
+this key, so the public Vercel URL cannot be used casually from another site.
+
 It is fine to deploy this backend from a different Vercel account than the one
 used for GitHub Pages. The only requirement is that the GitHub Pages app can
 reach the public Vercel domain entered in `API 주소`.
@@ -24,6 +28,7 @@ META_GRAPH_VERSION=v23.0
 META_ACCESS_TOKEN=your_long_lived_meta_token
 INSTAGRAM_BUSINESS_ACCOUNT_ID=your_instagram_business_account_id
 INSTAGRAM_OWNER_USERNAME=nonhyeon_dr_koo
+INSTAGRAM_ADMIN_KEY=make-a-long-random-private-key
 ```
 
 API routes:
