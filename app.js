@@ -1347,6 +1347,9 @@ function createInstagramErrorInbox(error) {
     apiBase: getInstagramApiBase() || window.location.origin,
     error: {
       message: getInstagramErrorMessage(error),
+      status: Number(error?.status || 0),
+      meta: error?.meta || null,
+      rawMessage: error?.rawMessage || error?.message || "",
     },
     account: {
       id: "",
@@ -1475,16 +1478,42 @@ function renderInstagramSourceStatus() {
     : `${errorMessage} API 주소: ${apiBase}`;
 
   instagramUi.setupItems.forEach((item) => {
-    item.classList.toggle("ready", isMeta);
-    const prefix = isMeta ? "완료" : "필요";
-    const envNames = {
-      token: "META_ACCESS_TOKEN",
-      account: "INSTAGRAM_BUSINESS_ACCOUNT_ID",
-      owner: "INSTAGRAM_OWNER_USERNAME",
-      admin: "INSTAGRAM_ADMIN_KEY",
-    };
-    item.textContent = `${prefix}: ${envNames[item.dataset.key] || item.dataset.key}`;
+    const state = getInstagramSetupItemState(item.dataset.key, isMeta);
+    item.classList.toggle("ready", state.status === "ready");
+    item.classList.toggle("missing", state.status === "missing");
+    item.classList.toggle("warning", state.status === "warning");
+    item.textContent = `${state.prefix}: ${state.label}`;
   });
+}
+
+function getInstagramSetupItemState(key, isMeta) {
+  const envNames = {
+    token: "META_ACCESS_TOKEN",
+    account: "INSTAGRAM_BUSINESS_ACCOUNT_ID",
+    owner: "INSTAGRAM_OWNER_USERNAME",
+    admin: "INSTAGRAM_ADMIN_KEY",
+  };
+  const envName = envNames[key] || key;
+  const missing = new Set(instagramData?.error?.meta?.missing || []);
+  const status = Number(instagramData?.error?.status || 0);
+
+  if (isMeta) {
+    return { label: envName, prefix: "완료", status: "ready" };
+  }
+
+  if (missing.has(envName)) {
+    return { label: envName, prefix: "누락", status: "missing" };
+  }
+
+  if (key === "admin" && status === 401) {
+    return { label: envName, prefix: "불일치", status: "missing" };
+  }
+
+  if (status === 0) {
+    return { label: envName, prefix: "확인 전", status: "pending" };
+  }
+
+  return { label: envName, prefix: "확인", status: "warning" };
 }
 
 function renderInstagramStats() {

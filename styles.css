@@ -938,6 +938,20 @@ button:hover,
   background: rgb(27 127 95 / 8%);
 }
 
+.igSetupItem.missing {
+  border-style: solid;
+  border-color: rgb(229 57 53 / 28%);
+  color: var(--accent-dark);
+  background: rgb(229 57 53 / 8%);
+}
+
+.igSetupItem.warning {
+  border-style: solid;
+  border-color: rgb(189 132 32 / 28%);
+  color: #8a5b09;
+  background: rgb(189 132 32 / 9%);
+}
+
 .igHealthButton {
   min-height: 30px;
   gap: 6px;
