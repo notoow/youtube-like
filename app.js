@@ -8,12 +8,14 @@ const STORAGE_KEYS = {
   clinicDefaultsVersion: "yt-heart-helper-clinic-defaults-version",
   instagramDoneIds: "yt-heart-helper-instagram-done-ids",
   instagramDrafts: "yt-heart-helper-instagram-drafts",
+  instagramApiBase: "yt-heart-helper-instagram-api-base",
   instagramMediaScope: "yt-heart-helper-instagram-media-scope",
   instagramScope: "yt-heart-helper-instagram-scope",
   viewMode: "yt-heart-helper-view-mode",
 };
 
 const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
+const INSTAGRAM_API_BASE_FALLBACK = "https://youtube-like.vercel.app";
 const OWNER_REPLY_HANDLES = [
   "@논현동구원장",
   "@Mens_BodyLab",
@@ -78,8 +80,9 @@ const listEditors = [...document.querySelectorAll(".listEditor")];
 const copyPromptButton = document.querySelector("#copyPromptButton");
 const filterButtons = [...document.querySelectorAll(".filterButton")];
 const instagramUi = {
-  metaButton: document.querySelector("#instagramMockButton"),
+  loadButton: document.querySelector("#instagramLoadButton"),
   refreshButton: document.querySelector("#instagramRefreshButton"),
+  apiBaseInput: document.querySelector("#instagramApiBase"),
   scopeInput: document.querySelector("#instagramScope"),
   mediaScopeButtons: [...document.querySelectorAll("[data-ig-media-scope]")],
   mediaList: document.querySelector(".igMediaList"),
@@ -124,6 +127,10 @@ function init() {
   if (instagramUi.scopeInput) {
     instagramUi.scopeInput.value =
       localStorage.getItem(STORAGE_KEYS.instagramScope) || instagramUi.scopeInput.value;
+  }
+  if (instagramUi.apiBaseInput) {
+    instagramUi.apiBaseInput.value =
+      localStorage.getItem(STORAGE_KEYS.instagramApiBase) || getDefaultInstagramApiBase();
   }
   activeInstagramMediaScope =
     localStorage.getItem(STORAGE_KEYS.instagramMediaScope) || activeInstagramMediaScope;
@@ -255,6 +262,7 @@ clearButton.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEYS.clinicStrengths);
   localStorage.removeItem(STORAGE_KEYS.instagramDoneIds);
   localStorage.removeItem(STORAGE_KEYS.instagramDrafts);
+  localStorage.removeItem(STORAGE_KEYS.instagramApiBase);
   localStorage.removeItem(STORAGE_KEYS.instagramMediaScope);
   localStorage.setItem(STORAGE_KEYS.clinicDefaultsVersion, CLINIC_DEFAULTS_VERSION);
   accessToken = "";
@@ -266,6 +274,7 @@ clearButton.addEventListener("click", () => {
     "550773902598-ted9eeglebq3jo5ju7t61rh3gh5bakim.apps.googleusercontent.com";
   resetChannelInputs();
   activeChannels = [];
+  if (instagramUi.apiBaseInput) instagramUi.apiBaseInput.value = getDefaultInstagramApiBase();
   clinicGuidelines = [...DEFAULT_CLINIC_GUIDELINES];
   clinicStrengths = [...DEFAULT_CLINIC_STRENGTHS];
   renderAllRuleLists();
@@ -315,7 +324,7 @@ filterButtons.forEach((button) => {
   });
 });
 
-instagramUi.metaButton?.addEventListener("click", () => {
+instagramUi.loadButton?.addEventListener("click", () => {
   loadInstagramInbox({ force: true });
 });
 
@@ -325,6 +334,17 @@ instagramUi.refreshButton?.addEventListener("click", () => {
 
 instagramUi.scopeInput?.addEventListener("change", () => {
   localStorage.setItem(STORAGE_KEYS.instagramScope, instagramUi.scopeInput.value);
+  loadInstagramInbox({ force: true });
+});
+
+instagramUi.apiBaseInput?.addEventListener("change", () => {
+  const apiBase = normalizeInstagramApiBase(instagramUi.apiBaseInput.value);
+  if (apiBase) {
+    localStorage.setItem(STORAGE_KEYS.instagramApiBase, apiBase);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.instagramApiBase);
+  }
+  instagramUi.apiBaseInput.value = apiBase || getDefaultInstagramApiBase();
   loadInstagramInbox({ force: true });
 });
 
@@ -1042,26 +1062,36 @@ async function loadInstagramInbox({ force = false } = {}) {
     commentsLimit: scope === "all" ? "100" : "50",
   });
 
-  instagramUi.metaButton.disabled = true;
+  instagramUi.loadButton.disabled = true;
   if (instagramUi.refreshButton) instagramUi.refreshButton.disabled = true;
   setInstagramButtonLabel("불러오는 중");
 
   try {
-    const response = await fetch(`api/instagram/media?${params}`);
-    if (!response.ok) throw new Error("Instagram API route is not available yet.");
+    const response = await fetch(buildInstagramApiUrl("/api/instagram/media", params), {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      throw new Error(await readApiError(response, "Instagram API에서 댓글을 불러오지 못했습니다."));
+    }
     instagramData = await response.json();
+    if (instagramData.source !== "meta") {
+      throw new Error("Vercel API는 연결됐지만 Meta 환경변수가 아직 실제 댓글 모드로 설정되지 않았습니다.");
+    }
+    instagramData.apiBase = getInstagramApiBase() || window.location.origin;
     instagramLoaded = true;
     selectedInstagramMediaId = instagramData.media?.[0]?.id || "";
     renderInstagramInbox();
-    setInstagramButtonLabel(instagramData.source === "meta" ? "Meta 연결됨" : "샘플 보기");
+    setInstagramButtonLabel("댓글 불러오기");
   } catch (error) {
-    instagramData = getClientInstagramSampleInbox();
+    console.error(error);
+    instagramData = createInstagramErrorInbox(error);
     instagramLoaded = true;
-    selectedInstagramMediaId = instagramData.media?.[0]?.id || "";
+    selectedInstagramMediaId = "";
     renderInstagramInbox();
-    setInstagramButtonLabel("샘플 보기");
+    setInstagramButtonLabel("다시 시도");
+    setStatus("Instagram 연결 실패", error.message || "실제 댓글을 불러오지 못했습니다.");
   } finally {
-    instagramUi.metaButton.disabled = false;
+    instagramUi.loadButton.disabled = false;
     if (instagramUi.refreshButton) instagramUi.refreshButton.disabled = false;
     refreshIcons();
   }
@@ -1069,6 +1099,60 @@ async function loadInstagramInbox({ force = false } = {}) {
 
 function getInstagramScope() {
   return instagramUi.scopeInput?.value || "50";
+}
+
+function getDefaultInstagramApiBase() {
+  return window.location.hostname.endsWith("github.io") ? INSTAGRAM_API_BASE_FALLBACK : "";
+}
+
+function normalizeInstagramApiBase(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function getInstagramApiBase() {
+  const inputValue = instagramUi.apiBaseInput?.value || "";
+  const storedValue = localStorage.getItem(STORAGE_KEYS.instagramApiBase) || "";
+  return normalizeInstagramApiBase(inputValue || storedValue || getDefaultInstagramApiBase());
+}
+
+function buildInstagramApiUrl(path, params) {
+  const apiBase = getInstagramApiBase();
+  const url = new URL(path, apiBase || window.location.origin);
+  if (params instanceof URLSearchParams) {
+    params.forEach((value, key) => url.searchParams.set(key, value));
+  } else {
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        url.searchParams.set(key, value);
+      }
+    });
+  }
+  return url.toString();
+}
+
+async function readApiError(response, fallback) {
+  try {
+    const data = await response.json();
+    return data.error || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function createInstagramErrorInbox(error) {
+  return recalculateInstagramStats({
+    source: "error",
+    needsConfiguration: true,
+    apiBase: getInstagramApiBase() || window.location.origin,
+    error: {
+      message: error?.message || "Instagram 실데이터 연결에 실패했습니다.",
+    },
+    account: {
+      id: "",
+      username: "nonhyeon_dr_koo",
+    },
+    media: [],
+  });
 }
 
 function readInstagramDoneIds() {
@@ -1129,98 +1213,6 @@ function clearInstagramDoneMarks() {
   setStatus("Instagram 완료 표시 초기화", "이 브라우저에 저장된 Instagram 처리 완료 표시를 지웠습니다.");
 }
 
-function getClientInstagramSampleInbox() {
-  const media = [
-    {
-      id: "client-sample-media-1",
-      title: "수면마취 잘 안되는 사람 특징",
-      caption: "수면마취가 잘 안 되는 경우와 상담 전 확인할 점",
-      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
-      timestamp: "2026-05-19T08:30:00.000Z",
-      commentsCount: 37,
-      comments: [
-        createClientSampleComment("client-c1", "lager6591", "남자 여유증이랑 함몰유두도 동시에 수술이 가능한가요?", "question", 2),
-        createClientSampleComment("client-c2", "body_qna", "확대수술 비용은 재료마다 차이가 큰가요? 상담 전에 대략 알고 싶어요.", "price", 5),
-        createClientSampleComment("client-c3", "fast_growth", "이 제품 먹으면 수술 없이 무조건 커진다던데 병원에서도 추천하나요?", "warning", 24),
-        createClientSampleComment("client-c4", "real_review_82", "설명 깔끔하네요. 궁금했던 내용이 풀렸습니다.", "reaction", 28),
-      ],
-    },
-    {
-      id: "client-sample-media-2",
-      title: "확대수술 후 회복 과정",
-      caption: "동종진피 확대수술 후 회복과 사후관리",
-      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
-      timestamp: "2026-05-18T04:10:00.000Z",
-      commentsCount: 29,
-      comments: [
-        createClientSampleComment("client-c5", "clinic_question", "동종진피랑 필러는 회복 기간이 많이 다른가요?", "question", 9),
-        createClientSampleComment("client-c6", "natural_size", "자연스러운 정도가 제일 중요한데 상담 때 어떤 걸 보나요?", "question", 12),
-      ],
-    },
-    {
-      id: "client-sample-media-3",
-      title: "발기부전 치료 옵션 정리",
-      caption: "약물치료와 주사치료를 포함한 발기부전 상담",
-      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
-      timestamp: "2026-05-17T06:00:00.000Z",
-      commentsCount: 24,
-      comments: [
-        createClientSampleComment("client-c7", "health_check", "당뇨가 있어도 발기부전 주사치료 상담이 가능한가요?", "question", 18),
-        createClientSampleComment("client-c8", "ed_info", "약 먹어도 효과가 약하면 다음 단계는 뭔가요?", "question", 21),
-      ],
-    },
-    {
-      id: "client-sample-media-4",
-      title: "남성수술 상담 전 확인할 점",
-      caption: "수술 전 피부 여유, 재료, 기대치 확인",
-      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
-      timestamp: "2026-05-15T01:00:00.000Z",
-      commentsCount: 18,
-      comments: [
-        createClientSampleComment("client-c9", "first_visit", "상담할 때 사진이나 이전 수술 기록도 가져가야 하나요?", "question", 33),
-      ],
-    },
-    {
-      id: "client-sample-media-5",
-      title: "여유증 수술 Q&A",
-      caption: "여유증 수술과 회복 Q&A",
-      permalink: "https://www.instagram.com/nonhyeon_dr_koo/",
-      timestamp: "2026-05-12T05:40:00.000Z",
-      commentsCount: 16,
-      comments: [
-        createClientSampleComment("client-c10", "recovery_q", "운동은 보통 언제부터 다시 가능한가요?", "question", 45),
-      ],
-    },
-  ];
-
-  return addClientInstagramStats({
-    source: "client-sample",
-    needsConfiguration: true,
-    account: {
-      id: "client-sample",
-      username: "nonhyeon_dr_koo",
-    },
-    media,
-  });
-}
-
-function createClientSampleComment(id, username, text, category, hoursAgo) {
-  return {
-    id,
-    username,
-    text,
-    category,
-    timestamp: new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString(),
-    likeCount: Math.floor(hoursAgo / 2),
-    hasOwnerReply: false,
-    replies: [],
-  };
-}
-
-function addClientInstagramStats(inbox) {
-  return recalculateInstagramStats(inbox);
-}
-
 function applyInstagramDoneState(inbox = instagramData) {
   if (!inbox?.media) return inbox;
   inbox.media.forEach((media) => {
@@ -1254,7 +1246,7 @@ function recalculateInstagramStats(inbox = instagramData) {
 }
 
 function renderInstagramInbox() {
-  if (!instagramData?.media?.length) return;
+  if (!instagramData) return;
   applyInstagramDoneState();
   recalculateInstagramStats();
   renderInstagramSourceStatus();
@@ -1265,24 +1257,21 @@ function renderInstagramInbox() {
 }
 
 function renderInstagramSourceStatus() {
-  const source = instagramData?.source || "client-sample";
+  const source = instagramData?.source || "error";
   const isMeta = source === "meta";
-  const isServerSample = source === "sample";
   const accountName = instagramData?.account?.username || "nonhyeon_dr_koo";
+  const apiBase = instagramData?.apiBase || getInstagramApiBase() || window.location.origin;
+  const errorMessage = instagramData?.error?.message || "Vercel API와 Meta 환경변수를 확인해 주세요.";
 
-  instagramUi.sourcePill.textContent = isMeta ? "Meta 실데이터" : "샘플 데이터";
+  instagramUi.sourcePill.textContent = isMeta ? "Meta 실데이터" : "연결 필요";
   instagramUi.sourcePill.classList.toggle("ready", isMeta);
-  instagramUi.sourcePill.classList.toggle("sample", !isMeta);
+  instagramUi.sourcePill.classList.toggle("error", !isMeta);
   instagramUi.sourceTitle.textContent = isMeta
-    ? `@${accountName} 연결됨`
-    : isServerSample
-      ? "Vercel API 연결됨 · Meta 환경변수 대기"
-      : "정적 페이지 샘플 모드";
+    ? `@${accountName} 실데이터 연결됨`
+    : "Instagram 실데이터 연결 실패";
   instagramUi.sourceDetail.textContent = isMeta
-    ? "Vercel API가 Meta Graph API에서 실제 영상과 댓글을 불러오고 있습니다."
-    : isServerSample
-      ? "Vercel 함수는 동작 중입니다. Meta 토큰과 Instagram 비즈니스 계정 ID를 넣으면 실데이터로 전환됩니다."
-      : "GitHub Pages처럼 API가 없는 환경입니다. 같은 화면 흐름을 샘플 데이터로 먼저 확인합니다.";
+    ? "Vercel API가 Meta Graph API에서 실제 게시물과 댓글을 불러오고 있습니다."
+    : `${errorMessage} API 주소: ${apiBase}`;
 
   instagramUi.setupItems.forEach((item) => {
     item.classList.toggle("ready", isMeta);
@@ -1397,10 +1386,18 @@ function selectInstagramMedia(mediaId) {
 }
 
 function renderInstagramComments() {
-  const media = getSelectedInstagramMedia();
-  if (!media) return;
-
   instagramUi.commentList.replaceChildren();
+  const media = getSelectedInstagramMedia();
+  if (!media) {
+    const empty = document.createElement("p");
+    empty.className = "channelEmpty";
+    empty.textContent = instagramData?.source === "error"
+      ? "Instagram 실데이터를 불러오지 못했습니다. API 주소와 Vercel 환경변수를 확인해 주세요."
+      : "불러온 Instagram 댓글이 없습니다.";
+    instagramUi.commentList.append(empty);
+    return;
+  }
+
   getVisibleInstagramComments(media).forEach((comment) => {
     instagramUi.commentList.append(renderInstagramCommentCard(media, comment));
   });
@@ -1517,7 +1514,7 @@ async function submitInstagramReply(comment, textarea, button) {
   button.disabled = true;
   button.textContent = "전송 중";
   try {
-    const response = await fetch("api/instagram/reply", {
+    const response = await fetch(buildInstagramApiUrl("/api/instagram/reply"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ commentId: comment.id, message }),
@@ -1548,7 +1545,18 @@ async function submitInstagramReply(comment, textarea, button) {
 
 function renderInstagramPromptBox() {
   const media = getSelectedInstagramMedia();
-  if (!media || !instagramUi.promptBox) return;
+  if (!instagramUi.promptBox) return;
+  if (!media) {
+    instagramUi.promptBox.querySelector("p").textContent = "선택 영상 0개 · 전체 후보 0개";
+    const noCandidates = () => {
+      setStatus("복사할 댓글 없음", "Instagram 실데이터를 먼저 불러와 주세요.");
+    };
+    if (instagramUi.promptSelectedButton) instagramUi.promptSelectedButton.onclick = noCandidates;
+    if (instagramUi.promptAllButton) instagramUi.promptAllButton.onclick = noCandidates;
+    if (instagramUi.applySelectedButton) instagramUi.applySelectedButton.onclick = noCandidates;
+    if (instagramUi.applyAllButton) instagramUi.applyAllButton.onclick = noCandidates;
+    return;
+  }
   const selectedComments = getInstagramPromptComments(media);
   const promptGroups = getInstagramPromptGroups();
   const totalCount = countInstagramPromptComments(promptGroups);
@@ -1760,7 +1768,7 @@ function getInstagramCategoryLabel(category) {
 }
 
 function setInstagramButtonLabel(label) {
-  const labelNode = instagramUi.metaButton?.querySelector("span");
+  const labelNode = instagramUi.loadButton?.querySelector("span");
   if (labelNode) labelNode.textContent = label;
 }
 

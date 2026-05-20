@@ -1,7 +1,21 @@
 # Instagram / Vercel setup
 
-The Instagram tab can run as a Vercel app. Without Meta credentials it returns
-sample data, so the UI remains testable before app review.
+The Instagram tab uses Vercel API routes for real Meta Graph API data. Without
+Meta credentials the API returns a configuration error instead of demo data.
+
+When the static GitHub Pages app is open, it calls this Vercel API base by
+default:
+
+```text
+https://youtube-like.vercel.app
+```
+
+If the Vercel project uses a different domain, update the `API 주소` field in
+the Instagram header. The value is saved in the browser.
+
+It is fine to deploy this backend from a different Vercel account than the one
+used for GitHub Pages. The only requirement is that the GitHub Pages app can
+reach the public Vercel domain entered in `API 주소`.
 
 Set these environment variables in Vercel:
 
