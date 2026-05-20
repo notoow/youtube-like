@@ -1108,7 +1108,7 @@ async function loadInstagramInbox({ force = false } = {}) {
       headers: buildInstagramApiHeaders({ Accept: "application/json" }),
     });
     if (!response.ok) {
-      throw new Error(await readApiError(response, "Instagram API에서 댓글을 불러오지 못했습니다."));
+      throw await createInstagramApiError(response, "Instagram API에서 댓글을 불러오지 못했습니다.");
     }
     instagramData = await response.json();
     if (instagramData.source !== "meta") {
@@ -1126,7 +1126,7 @@ async function loadInstagramInbox({ force = false } = {}) {
     selectedInstagramMediaId = "";
     renderInstagramInbox();
     setInstagramButtonLabel("다시 시도");
-    setStatus("Instagram 연결 실패", error.message || "실제 댓글을 불러오지 못했습니다.");
+    setStatus("Instagram 연결 실패", getInstagramErrorMessage(error));
   } finally {
     instagramUi.loadButton.disabled = false;
     if (instagramUi.refreshButton) instagramUi.refreshButton.disabled = false;
@@ -1143,7 +1143,7 @@ async function testInstagramConnection() {
       headers: buildInstagramApiHeaders({ Accept: "application/json" }),
     });
     if (!response.ok) {
-      throw new Error(await readApiError(response, "Instagram 연결 테스트에 실패했습니다."));
+      throw await createInstagramApiError(response, "Instagram 연결 테스트에 실패했습니다.");
     }
 
     const data = await response.json();
@@ -1162,7 +1162,7 @@ async function testInstagramConnection() {
     console.error(error);
     instagramData = createInstagramErrorInbox(error);
     renderInstagramInbox();
-    setStatus("Instagram 연결 테스트 실패", error.message || "Vercel API 설정을 확인해 주세요.");
+    setStatus("Instagram 연결 테스트 실패", getInstagramErrorMessage(error));
   } finally {
     if (instagramUi.healthButton) instagramUi.healthButton.disabled = false;
     refreshIcons();
@@ -1258,13 +1258,86 @@ function buildInstagramApiUrl(path, params) {
   return url.toString();
 }
 
-async function readApiError(response, fallback) {
+async function createInstagramApiError(response, fallback) {
+  let data = null;
   try {
-    const data = await response.json();
-    return data.error || fallback;
+    data = await response.json();
   } catch {
-    return fallback;
+    data = null;
   }
+  return createInstagramApiErrorFromData(response, data, fallback);
+}
+
+function createInstagramApiErrorFromData(response, data, fallback) {
+  const rawMessage = data?.error || fallback || response.statusText || "Instagram API 요청에 실패했습니다.";
+  const error = new Error(rawMessage);
+  error.status = response.status;
+  error.meta = data?.meta || null;
+  error.rawMessage = rawMessage;
+  error.userMessage = explainInstagramApiError(error);
+  return error;
+}
+
+function getInstagramErrorMessage(error) {
+  return error?.userMessage || explainInstagramApiError(error);
+}
+
+function explainInstagramApiError(error) {
+  const status = Number(error?.status || 0);
+  const rawMessage = String(error?.rawMessage || error?.message || "").trim();
+  const missing = Array.isArray(error?.meta?.missing) ? error.meta.missing : [];
+
+  if (missing.length) {
+    return `${formatMissingInstagramEnv(missing)} Vercel 프로젝트의 환경변수에 값을 넣은 뒤 다시 배포해 주세요.`;
+  }
+
+  if (status === 401) {
+    return "운영 키가 비어 있거나 Vercel의 INSTAGRAM_ADMIN_KEY와 다릅니다. 화면의 운영 키와 Vercel 환경변수 값을 같게 맞춰 주세요.";
+  }
+
+  if (status === 404) {
+    return "Instagram API 주소가 잘못됐습니다. API 주소가 Vercel 프로젝트 루트인지, /api/instagram 경로가 배포됐는지 확인해 주세요.";
+  }
+
+  if (status === 405) {
+    return "Instagram API 요청 방식이 맞지 않습니다. 최신 페이지로 새로고침한 뒤 다시 시도해 주세요.";
+  }
+
+  if (status === 503) {
+    return "Vercel API는 응답했지만 필수 환경변수가 아직 완성되지 않았습니다. env 복사 값과 Meta 토큰, Instagram 비즈니스 계정 ID를 확인해 주세요.";
+  }
+
+  if (/failed to fetch|load failed|networkerror/i.test(rawMessage)) {
+    return "Vercel API에 연결하지 못했습니다. API 주소, Vercel 배포 상태, 브라우저 네트워크 차단 여부를 확인해 주세요.";
+  }
+
+  if (/invalid oauth|access token|oauth/i.test(rawMessage)) {
+    return "Meta access token이 만료됐거나 권한이 부족합니다. META_ACCESS_TOKEN을 다시 발급해서 Vercel 환경변수에 넣어 주세요.";
+  }
+
+  if (/permission|permissions|not authorized/i.test(rawMessage)) {
+    return "Meta 앱 권한이 부족합니다. Instagram 댓글 읽기/관리 권한과 연결된 비즈니스 계정을 확인해 주세요.";
+  }
+
+  if (/unsupported get request|object does not exist|cannot be loaded/i.test(rawMessage)) {
+    return "Instagram 비즈니스 계정 ID가 잘못됐거나 토큰이 그 계정에 접근할 수 없습니다. INSTAGRAM_BUSINESS_ACCOUNT_ID와 토큰 발급 계정을 확인해 주세요.";
+  }
+
+  if (status >= 500) {
+    return `Vercel 함수 오류입니다. Vercel 로그를 확인해 주세요.${rawMessage ? ` 원문: ${rawMessage}` : ""}`;
+  }
+
+  return rawMessage || "Instagram API 설정을 확인해 주세요.";
+}
+
+function formatMissingInstagramEnv(missing) {
+  const labels = {
+    INSTAGRAM_ADMIN_KEY: "운영 키(INSTAGRAM_ADMIN_KEY)",
+    META_ACCESS_TOKEN: "Meta 토큰(META_ACCESS_TOKEN)",
+    INSTAGRAM_BUSINESS_ACCOUNT_ID: "Instagram 비즈니스 계정 ID",
+    INSTAGRAM_OWNER_USERNAME: "Instagram 운영 계정 이름",
+  };
+  return `${missing.map((item) => labels[item] || item).join(", ")}가 Vercel에 없습니다.`;
 }
 
 function createInstagramErrorInbox(error) {
@@ -1273,7 +1346,7 @@ function createInstagramErrorInbox(error) {
     needsConfiguration: true,
     apiBase: getInstagramApiBase() || window.location.origin,
     error: {
-      message: error?.message || "Instagram 실데이터 연결에 실패했습니다.",
+      message: getInstagramErrorMessage(error),
     },
     account: {
       id: "",
@@ -1649,8 +1722,10 @@ async function submitInstagramReply(comment, textarea, button) {
       headers: buildInstagramApiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ commentId: comment.id, message }),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Instagram reply failed.");
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw createInstagramApiErrorFromData(response, data, "Instagram 답글 전송에 실패했습니다.");
+    }
     comment.hasOwnerReply = true;
     comment.replies = [
       ...(comment.replies || []),
@@ -1666,7 +1741,7 @@ async function submitInstagramReply(comment, textarea, button) {
     renderInstagramInbox();
     setStatus("Instagram 답글 완료", `@${comment.username} 댓글에 답글을 달았습니다.`);
   } catch (error) {
-    setStatus("Instagram 답글 실패", error.message || "답글 전송에 실패했습니다.");
+    setStatus("Instagram 답글 실패", getInstagramErrorMessage(error));
   } finally {
     button.disabled = false;
     button.textContent = "답글 달기";
