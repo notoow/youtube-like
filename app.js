@@ -84,6 +84,9 @@ const instagramUi = {
   loadButton: document.querySelector("#instagramLoadButton"),
   refreshButton: document.querySelector("#instagramRefreshButton"),
   healthButton: document.querySelector("#instagramHealthButton"),
+  generateKeyButton: document.querySelector("#instagramGenerateKeyButton"),
+  copyKeyButton: document.querySelector("#instagramCopyKeyButton"),
+  copyEnvButton: document.querySelector("#instagramCopyEnvButton"),
   apiBaseInput: document.querySelector("#instagramApiBase"),
   adminKeyInput: document.querySelector("#instagramAdminKey"),
   scopeInput: document.querySelector("#instagramScope"),
@@ -342,6 +345,18 @@ instagramUi.refreshButton?.addEventListener("click", () => {
 
 instagramUi.healthButton?.addEventListener("click", () => {
   testInstagramConnection();
+});
+
+instagramUi.generateKeyButton?.addEventListener("click", () => {
+  generateInstagramAdminKey();
+});
+
+instagramUi.copyKeyButton?.addEventListener("click", () => {
+  copyInstagramAdminKey();
+});
+
+instagramUi.copyEnvButton?.addEventListener("click", () => {
+  copyInstagramEnvTemplate();
 });
 
 instagramUi.scopeInput?.addEventListener("change", () => {
@@ -1152,6 +1167,51 @@ async function testInstagramConnection() {
     if (instagramUi.healthButton) instagramUi.healthButton.disabled = false;
     refreshIcons();
   }
+}
+
+function generateInstagramAdminKey() {
+  ensureInstagramAdminKey({ forceNew: true });
+  setStatus("운영 키 생성 완료", "새 운영 키를 만들고 이 브라우저에 저장했습니다. Vercel env에도 같은 값을 넣어주세요.");
+}
+
+async function copyInstagramAdminKey() {
+  const adminKey = ensureInstagramAdminKey();
+
+  await copyText(adminKey);
+  setStatus("운영 키 복사 완료", "Vercel의 INSTAGRAM_ADMIN_KEY 값으로 붙여넣으면 됩니다.");
+}
+
+async function copyInstagramEnvTemplate() {
+  const adminKey = ensureInstagramAdminKey();
+  const envText = [
+    "META_GRAPH_VERSION=v23.0",
+    "META_ACCESS_TOKEN=",
+    "INSTAGRAM_BUSINESS_ACCOUNT_ID=",
+    "INSTAGRAM_OWNER_USERNAME=nonhyeon_dr_koo",
+    `INSTAGRAM_ADMIN_KEY=${adminKey}`,
+  ].join("\n");
+
+  await copyText(envText);
+  setStatus(
+    "Vercel env 복사 완료",
+    "Vercel 환경변수에 붙여넣고 Meta 토큰과 계정 ID만 채우면 됩니다.",
+  );
+}
+
+function ensureInstagramAdminKey({ forceNew = false } = {}) {
+  const existing = getInstagramAdminKey();
+  const key = !forceNew && existing ? existing : createInstagramAdminKey();
+  if (instagramUi.adminKeyInput) instagramUi.adminKeyInput.value = key;
+  localStorage.setItem(STORAGE_KEYS.instagramAdminKey, key);
+  return key;
+}
+
+function createInstagramAdminKey() {
+  const bytes = new Uint8Array(24);
+  window.crypto.getRandomValues(bytes);
+  return [...bytes]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function getInstagramScope() {

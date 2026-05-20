@@ -16,6 +16,8 @@ the Instagram header. The value is saved in the browser.
 Set the same private value in Vercel `INSTAGRAM_ADMIN_KEY` and in the
 Instagram header `운영 키` field. Both comment loading and replying require
 this key, so the public Vercel URL cannot be used casually from another site.
+Use `키 생성` and `env 복사` in the Instagram header tools to prepare the
+matching browser key and Vercel environment-variable block.
 
 It is fine to deploy this backend from a different Vercel account than the one
 used for GitHub Pages. The only requirement is that the GitHub Pages app can

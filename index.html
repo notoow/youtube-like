@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YouTube Comment Heart Helper</title>
-    <link rel="stylesheet" href="styles.css?v=20260520-instagram-live-api" />
+    <link rel="stylesheet" href="styles.css?v=20260520-instagram-env-helper" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
   </head>
@@ -245,6 +245,18 @@
             <button type="button" id="instagramHealthButton" class="igHealthButton">
               <i data-lucide="activity"></i>
               <span>연결 테스트</span>
+            </button>
+            <button type="button" id="instagramGenerateKeyButton" class="igHealthButton">
+              <i data-lucide="key-round"></i>
+              <span>키 생성</span>
+            </button>
+            <button type="button" id="instagramCopyKeyButton" class="igHealthButton">
+              <i data-lucide="copy"></i>
+              <span>키 복사</span>
+            </button>
+            <button type="button" id="instagramCopyEnvButton" class="igHealthButton">
+              <i data-lucide="clipboard-list"></i>
+              <span>env 복사</span>
             </button>
           </div>
         </section>
@@ -507,6 +519,6 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260520-instagram-live-api"></script>
+    <script src="app.js?v=20260520-instagram-env-helper"></script>
   </body>
 </html>
