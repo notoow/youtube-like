@@ -7,7 +7,7 @@ When the static GitHub Pages app is open, it calls this Vercel API base by
 default:
 
 ```text
-https://youtube-like.vercel.app
+https://insta-youtube-like.vercel.app
 ```
 
 If the Vercel project uses a different domain, update the `API 주소` field in

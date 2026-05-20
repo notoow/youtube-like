@@ -16,7 +16,7 @@ const STORAGE_KEYS = {
 };
 
 const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
-const INSTAGRAM_API_BASE_FALLBACK = "https://youtube-like.vercel.app";
+const INSTAGRAM_API_BASE_FALLBACK = "https://insta-youtube-like.vercel.app";
 const OWNER_REPLY_HANDLES = [
   "@논현동구원장",
   "@Mens_BodyLab",
