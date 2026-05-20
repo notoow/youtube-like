@@ -12,6 +12,9 @@ https://youtube-like.vercel.app
 
 If the Vercel project uses a different domain, update the `API 주소` field in
 the Instagram header. The value is saved in the browser.
+You can paste the Vercel root domain or a full API URL such as
+`https://your-project.vercel.app/api/instagram/health`; the app keeps only the
+project root.
 
 Set the same private value in Vercel `INSTAGRAM_ADMIN_KEY` and in the
 Instagram header `운영 키` field. Both comment loading and replying require

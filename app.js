@@ -365,13 +365,23 @@ instagramUi.scopeInput?.addEventListener("change", () => {
 });
 
 instagramUi.apiBaseInput?.addEventListener("change", () => {
-  const apiBase = normalizeInstagramApiBase(instagramUi.apiBaseInput.value);
+  const rawApiBase = instagramUi.apiBaseInput.value;
+  const apiBase = normalizeInstagramApiBase(rawApiBase);
+  if (rawApiBase.trim() && !apiBase) {
+    setStatus("API 주소 확인 필요", "Vercel 주소는 https://프로젝트명.vercel.app 형식으로 입력해 주세요.");
+    instagramUi.apiBaseInput.value = localStorage.getItem(STORAGE_KEYS.instagramApiBase) || getDefaultInstagramApiBase();
+    return;
+  }
+
   if (apiBase) {
     localStorage.setItem(STORAGE_KEYS.instagramApiBase, apiBase);
   } else {
     localStorage.removeItem(STORAGE_KEYS.instagramApiBase);
   }
   instagramUi.apiBaseInput.value = apiBase || getDefaultInstagramApiBase();
+  if (apiBase && rawApiBase.trim().replace(/\/+$/, "") !== apiBase) {
+    setStatus("API 주소 정리 완료", `${apiBase} 주소로 저장했습니다.`);
+  }
   loadInstagramInbox({ force: true });
 });
 
@@ -1223,7 +1233,17 @@ function getDefaultInstagramApiBase() {
 }
 
 function normalizeInstagramApiBase(value) {
-  return String(value || "").trim().replace(/\/+$/, "");
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+
+  try {
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) && !/^https?:\/\//i.test(trimmed)) return "";
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    if (!/^https?:$/.test(url.protocol)) return "";
+    return url.origin.replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
 }
 
 function getInstagramApiBase() {
